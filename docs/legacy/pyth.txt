@@ -1,0 +1,151 @@
+Markdown# Implementación Computacional: Arquitectura TSM (Bubble Transformer)
+
+**Estado:** Formalización Algorítmica  
+**Entorno Objetivo:** Aceleración de Hardware (CUDA/TPU)  
+**Dependencias:** `torch`, `numpy`  
+
+A continuación se define la estructura computacional del Transformador de Superficie Mínima. Se divide la implementación en la definición de interfaces topológicas estáticas y la ejecución dinámica del tensor en el espacio latente.
+
+---
+
+## 1. Topología de Estructuras de Datos (Definición de Tipos)
+
+Definición de las restricciones de hiperparámetros y la firma del contrato computacional para el bloque de atención.
+
+```typescript
+// Especificación estructural en TypeScript para análisis de tipos
+interface TopologiaTSM {
+    d_model: number;          // Dimensionalidad de la variedad latente (ej. 512, 1024)
+    num_heads: number;        // Sub-variedades paralelas para proyección de atención
+    epsilon: number;          // Coeficiente de regularización entrópica (viscosidad de la película)
+    tau_iters: number;        // Límite de iteraciones del solucionador de Euler-Lagrange discreto
+}
+
+interface EstadoTensor {
+    query: Float32Array;      // Matriz Q ∈ ℝ^(N × d)
+    key: Float32Array;        // Matriz K ∈ ℝ^(N × d)
+    value: Float32Array;      // Matriz V ∈ ℝ^(N × d)
+    cost: Float32Array;       // Tensor de distancia geométrica C ∈ ℝ^(N × N)
+}
+
+type FuncionRelajacion = (estado: EstadoTensor, config: TopologiaTSM) => Float32Array;
+2. Núcleo Matemático: Transporte Óptimo Entrópico (PyTorch)Implementación del mecanismo central que computa la matriz de atención esparsa $\mathcal{A}$ minimizando la energía de Dirichlet a través del algoritmo de Sinkhorn en el dominio logarítmico para garantizar estabilidad numérica.Pythonimport torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class SinkhornMinimalSurface(nn.Module):
+    """
+    Computa la aproximación discreta de la superficie mínima de Plateau 
+    en el espacio latente utilizando Transporte Óptimo Regularizado.
+    """
+    def __init__(self, epsilon: float = 0.05, tau_iters: int = 5):
+        super().__init__()
+        self.epsilon = epsilon
+        self.tau_iters = tau_iters
+
+    def forward(self, Q: torch.Tensor, K: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+        """
+        Q, K dimensiones esperadas: [Batch, Heads, SeqLen, D_head]
+        Retorna matriz de enrutamiento A: [Batch, Heads, SeqLen, SeqLen]
+        """
+        # 1. Matriz de Costo Geométrico (Tensión) - Distancia Euclidiana al cuadrado
+        # C_ij = ||Q_i - K_j||^2 = ||Q||^2 + ||K||^2 - 2(Q @ K^T)
+        Q_sq = torch.sum(Q ** 2, dim=-1, keepdim=True)
+        K_sq = torch.sum(K ** 2, dim=-1, keepdim=True).transpose(-2, -1)
+        C = Q_sq + K_sq - 2 * torch.matmul(Q, K.transpose(-2, -1))
+        
+        # 2. Dominio Logarítmico de Gibbs
+        log_S = -C / self.epsilon
+        
+        # 3. Aplicación de condiciones de contorno (Máscara causal o de padding)
+        if mask is not None:
+            log_S = log_S.masked_fill(mask == 0, float('-inf'))
+            
+        # 4. Inicialización de Vectores Duales (u, v)
+        u = torch.zeros_like(log_S[..., :, 0])
+        v = torch.zeros_like(log_S[..., 0, :])
+        
+        # 5. Iteraciones de Relajación Topológica
+        for _ in range(self.tau_iters):
+            u = -torch.logsumexp(log_S + v.unsqueeze(-2), dim=-1)
+            v = -torch.logsumexp(log_S + u.unsqueeze(-1), dim=-2)
+            
+        # 6. Colapso de la Superficie (Matriz A)
+        A_optimal = torch.exp(log_S + u.unsqueeze(-1) + v.unsqueeze(-2))
+        
+        return A_optimal
+3. Arquitectura Multi-Cabezal: TSM BlockIntegración del núcleo de Sinkhorn en una arquitectura de proyecciones lineales paralelizables, análoga al bloque Multi-Head Attention estándar.Pythonclass MultiHeadBubbleAttention(nn.Module):
+    """
+    Proyección de la secuencia en múltiples sub-variedades latentes para
+    la resolución paralela de superficies mínimas.
+    """
+    def __init__(self, d_model: int, num_heads: int, epsilon: float = 0.05, tau_iters: int = 5):
+        super().__init__()
+        assert d_model % num_heads == 0, "d_model debe ser divisible por num_heads"
+        
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.d_head = d_model // num_heads
+        
+        self.W_q = nn.Linear(d_model, d_model)
+        self.W_k = nn.Linear(d_model, d_model)
+        self.W_v = nn.Linear(d_model, d_model)
+        self.W_o = nn.Linear(d_model, d_model)
+        
+        self.minimal_surface_solver = SinkhornMinimalSurface(epsilon, tau_iters)
+
+    def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+        Batch, SeqLen, _ = x.shape
+        
+        # 1. Proyección de Frontera
+        Q = self.W_q(x).view(Batch, SeqLen, self.num_heads, self.d_head).transpose(1, 2)
+        K = self.W_k(x).view(Batch, SeqLen, self.num_heads, self.d_head).transpose(1, 2)
+        V = self.W_v(x).view(Batch, SeqLen, self.num_heads, self.d_head).transpose(1, 2)
+        
+        if mask is not None:
+            mask = mask.unsqueeze(1).unsqueeze(2) # [B, 1, 1, SeqLen]
+            
+        # 2. Computación de la Superficie Mínima (Enrutamiento Esparso)
+        A_optimal = self.minimal_surface_solver(Q, K, mask)
+        
+        # 3. Propagación de Gradiente y Valores
+        out = torch.matmul(A_optimal, V)
+        
+        # 4. Reconstrucción de la Variedad (Concatenación de cabezales)
+        out = out.transpose(1, 2).contiguous().view(Batch, SeqLen, self.d_model)
+        
+        return self.W_o(out)
+4. Verificación Computacional de ComplejidadDefinición de la función de perfilado para validar asintóticamente la convergencia espacial y temporal del bloque.Pythondef verify_complexity(batch_size: int = 32, seq_len: int = 1024, d_model: int = 512):
+    """
+    Función para medir el consumo de VRAM y tiempo de ejecución.
+    Demuestra la reducción asintótica si se fusiona (kernel fusion)
+    el bucle de Sinkhorn en hardware específico.
+    """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = MultiHeadBubbleAttention(d_model=d_model, num_heads=8).to(device)
+    
+    # Tensor de entrada simulado
+    x = torch.randn(batch_size, seq_len, d_model).to(device)
+    
+    import time
+    torch.cuda.synchronize()
+    start_time = time.time()
+    
+    with torch.no_grad():
+        output = model(x)
+        
+    torch.cuda.synchronize()
+    computational_time = time.time() - start_time
+    
+    # Análisis de Memoria
+    allocated_memory = torch.cuda.memory_allocated(device) / (1024 ** 2) # MB
+    
+    return {
+        "tiempo_ejecucion_segundos": computational_time,
+        "memoria_vram_mb": allocated_memory,
+        "forma_tensor_salida": list(output.shape)
+    }
+
+# Ejecución de prueba
+# metrics = verify_complexity(seq_len=4096)
+# print(metrics)

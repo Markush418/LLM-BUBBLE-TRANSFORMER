@@ -1,0 +1,243 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. Todos los derechos reservados.
+
+Prueba la nueva tecnología PowerShell multiplataforma https://aka.ms/pscore6
+
+PS C:\Windows\system32> cd C:\Users\negocio\Desktop\LLM-BUBBLE
+PS C:\Users\negocio\Desktop\LLM-BUBBLE> pip install bitsandbytes accelerate transformers torch numpy scipy matplotlib seaborn scikit-learn tqdm
+Collecting bitsandbytes
+  Downloading bitsandbytes-0.49.2-py3-none-win_amd64.whl.metadata (10 kB)
+Collecting accelerate
+  Using cached accelerate-1.13.0-py3-none-any.whl.metadata (19 kB)
+Collecting transformers
+  Using cached transformers-5.4.0-py3-none-any.whl.metadata (32 kB)
+Collecting torch
+  Using cached torch-2.11.0-cp314-cp314-win_amd64.whl.metadata (29 kB)
+Requirement already satisfied: numpy in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (2.4.4)
+Requirement already satisfied: scipy in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (1.17.1)
+Requirement already satisfied: matplotlib in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (3.10.8)
+Requirement already satisfied: seaborn in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (0.13.2)
+Requirement already satisfied: scikit-learn in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (1.8.0)
+Requirement already satisfied: tqdm in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (4.67.3)
+Requirement already satisfied: packaging>=20.9 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from bitsandbytes) (26.0)
+Requirement already satisfied: filelock in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from torch) (3.25.2)
+Requirement already satisfied: typing-extensions>=4.10.0 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from torch) (4.15.0)
+Requirement already satisfied: setuptools<82 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from torch) (81.0.0)
+Requirement already satisfied: sympy>=1.13.3 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from torch) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from torch) (3.6.1)
+Requirement already satisfied: jinja2 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from torch) (3.1.6)
+Requirement already satisfied: fsspec>=0.8.5 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from torch) (2026.3.0)
+Requirement already satisfied: psutil in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from accelerate) (7.2.2)
+Requirement already satisfied: pyyaml in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from accelerate) (6.0.3)
+Collecting huggingface_hub>=0.21.0 (from accelerate)
+  Using cached huggingface_hub-1.8.0-py3-none-any.whl.metadata (13 kB)
+Requirement already satisfied: safetensors>=0.4.3 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from accelerate) (0.7.0)
+Requirement already satisfied: regex>=2025.10.22 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from transformers) (2026.3.32)
+Collecting tokenizers<=0.23.0,>=0.22.0 (from transformers)
+  Using cached tokenizers-0.22.2-cp39-abi3-win_amd64.whl.metadata (7.4 kB)
+Requirement already satisfied: typer in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from transformers) (0.24.1)
+Requirement already satisfied: hf-xet<2.0.0,>=1.4.2 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from huggingface_hub>=0.21.0->accelerate) (1.4.3)
+Requirement already satisfied: httpx<1,>=0.23.0 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from huggingface_hub>=0.21.0->accelerate) (0.28.1)
+Requirement already satisfied: anyio in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from httpx<1,>=0.23.0->huggingface_hub>=0.21.0->accelerate) (4.13.0)
+Requirement already satisfied: certifi in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from httpx<1,>=0.23.0->huggingface_hub>=0.21.0->accelerate) (2026.2.25)
+Requirement already satisfied: httpcore==1.* in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from httpx<1,>=0.23.0->huggingface_hub>=0.21.0->accelerate) (1.0.9)
+Requirement already satisfied: idna in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from httpx<1,>=0.23.0->huggingface_hub>=0.21.0->accelerate) (3.11)
+Requirement already satisfied: h11>=0.16 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from httpcore==1.*->httpx<1,>=0.23.0->huggingface_hub>=0.21.0->accelerate) (0.16.0)
+Requirement already satisfied: contourpy>=1.0.1 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from matplotlib) (1.3.3)
+Requirement already satisfied: cycler>=0.10 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from matplotlib) (0.12.1)
+Requirement already satisfied: fonttools>=4.22.0 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from matplotlib) (4.62.1)
+Requirement already satisfied: kiwisolver>=1.3.1 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from matplotlib) (1.5.0)
+Requirement already satisfied: pillow>=8 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from matplotlib) (12.2.0)
+Requirement already satisfied: pyparsing>=3 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from matplotlib) (3.3.2)
+Requirement already satisfied: python-dateutil>=2.7 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from matplotlib) (2.9.0.post0)
+Requirement already satisfied: pandas>=1.2 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from seaborn) (3.0.2)
+Requirement already satisfied: joblib>=1.3.0 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from scikit-learn) (1.5.3)
+Requirement already satisfied: threadpoolctl>=3.2.0 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from scikit-learn) (3.6.0)
+Requirement already satisfied: colorama in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from tqdm) (0.4.6)
+Requirement already satisfied: tzdata in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from pandas>=1.2->seaborn) (2025.3)
+Requirement already satisfied: six>=1.5 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from python-dateutil>=2.7->matplotlib) (1.17.0)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from sympy>=1.13.3->torch) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from jinja2->torch) (3.0.3)
+Requirement already satisfied: click>=8.2.1 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from typer->transformers) (8.3.1)
+Requirement already satisfied: shellingham>=1.3.0 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from typer->transformers) (1.5.4)
+Requirement already satisfied: rich>=12.3.0 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from typer->transformers) (14.3.3)
+Requirement already satisfied: annotated-doc>=0.0.2 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from typer->transformers) (0.0.4)
+Requirement already satisfied: markdown-it-py>=2.2.0 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from rich>=12.3.0->typer->transformers) (4.0.0)
+Requirement already satisfied: pygments<3.0.0,>=2.13.0 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from rich>=12.3.0->typer->transformers) (2.20.0)
+Requirement already satisfied: mdurl~=0.1 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from markdown-it-py>=2.2.0->rich>=12.3.0->typer->transformers) (0.1.2)
+Downloading bitsandbytes-0.49.2-py3-none-win_amd64.whl (55.4 MB)
+   ---------------------------------------- 55.4/55.4 MB 40.0 MB/s  0:00:01
+Using cached torch-2.11.0-cp314-cp314-win_amd64.whl (114.6 MB)
+Using cached accelerate-1.13.0-py3-none-any.whl (383 kB)
+Using cached transformers-5.4.0-py3-none-any.whl (10.1 MB)
+Using cached huggingface_hub-1.8.0-py3-none-any.whl (625 kB)
+Using cached tokenizers-0.22.2-cp39-abi3-win_amd64.whl (2.7 MB)
+Installing collected packages: torch, bitsandbytes, huggingface_hub, tokenizers, accelerate, transformers
+   ---------------------------------------- 0/6 [torch]  WARNING: The scripts torchfrtrace.exe and torchrun.exe are installed in 'C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\Scripts' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+   ------------- -------------------------- 2/6 [huggingface_hub]  WARNING: The scripts hf.exe and tiny-agents.exe are installed in 'C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\Scripts' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+   -------------------------- ------------- 4/6 [accelerate]  WARNING: The scripts accelerate-config.exe, accelerate-estimate-memory.exe, accelerate-launch.exe, accelerate-merge-weights.exe and accelerate.exe are installed in 'C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\Scripts' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+   --------------------------------- ------ 5/6 [transformers]  WARNING: The script transformers.exe is installed in 'C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\Scripts' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+Successfully installed accelerate-1.13.0 bitsandbytes-0.49.2 huggingface_hub-1.8.0 tokenizers-0.22.2 torch-2.11.0 transformers-5.4.0
+
+[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] To update, run: C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\python.exe -m pip install --upgrade pip
+PS C:\Users\negocio\Desktop\LLM-BUBBLE>
+PS C:\Users\negocio\Desktop\LLM-BUBBLE> python extract_embeddings.py
+C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\python.exe: can't open file 'C:\\Users\\negocio\\Desktop\\LLM-BUBBLE\\extract_embeddings.py': [Errno 2] No such file or directory
+PS C:\Users\negocio\Desktop\LLM-BUBBLE> python experiments/extract_embeddings.py
+======================================================================
+  Qwen3-0.6B Embedding Extractor — 4-bit NF4 Quantized
+  LLM-BUBBLE — Real Embeddings Mode
+======================================================================
+
+[Step 1/3] Loading corpus...
+[Corpus] Loaded 50 texts from data/test_corpus.jsonl
+
+[Step 2/3] Loading model and extracting embeddings...
+--------------------------------------------------
+[Extractor] Loading Qwen/Qwen3-0.6B-Base in 4-bit NF4...
+[Extractor] Device: cuda, Batch: 2, Max len: 512
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+config.json: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 727/727 [00:00<00:00, 3.86MB/s]
+tokenizer_config.json: 9.68kB [00:00, 28.6MB/s]
+vocab.json: 2.78MB [00:00, 56.7MB/s]
+merges.txt: 1.67MB [00:00, 46.1MB/s]
+tokenizer.json: 7.03MB [00:00, 79.1MB/s]
+`torch_dtype` is deprecated! Use `dtype` instead!
+model.safetensors: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1.19G/1.19G [00:12<00:00, 95.9MB/s]
+
+[ERROR] Failed to load model: Torch not compiled with CUDA enabled
+[Hint] Make sure bitsandbytes is installed:
+  pip install bitsandbytes accelerate transformers
+[Hint] On Windows, you may need:
+  pip install bitsandbytes-windows
+PS C:\Users\negocio\Desktop\LLM-BUBBLE> pip install bistandbytes-windows
+ERROR: Could not find a version that satisfies the requirement bistandbytes-windows (from versions: none)
+
+[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] To update, run: C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\python.exe -m pip install --upgrade pip
+ERROR: No matching distribution found for bistandbytes-windows
+PS C:\Users\negocio\Desktop\LLM-BUBBLE> pip install bistandbytes-windows
+ERROR: Could not find a version that satisfies the requirement bistandbytes-windows (from versions: none)
+
+[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] To update, run: C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\python.exe -m pip install --upgrade pip
+ERROR: No matching distribution found for bistandbytes-windows
+PS C:\Users\negocio\Desktop\LLM-BUBBLE> nvidia-smi
+Wed Apr  1 22:56:53 2026
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 591.74                 Driver Version: 591.74         CUDA Version: 13.1     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                  Driver-Model | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce GTX 1650      WDDM  |   00000000:01:00.0  On |                  N/A |
+| 35%   33C    P8              7W /   75W |     745MiB /   4096MiB |     23%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A            1472    C+G   ...Chrome\Application\chrome.exe      N/A      |
+|    0   N/A  N/A            1524    C+G   C:\Windows\System32\dwm.exe           N/A      |
+|    0   N/A  N/A            6184    C+G   ...h_cw5n1h2txyewy\SearchApp.exe      N/A      |
+|    0   N/A  N/A            7476    C+G   ...5n1h2txyewy\TextInputHost.exe      N/A      |
+|    0   N/A  N/A            7708    C+G   ....0.3856.84\msedgewebview2.exe      N/A      |
+|    0   N/A  N/A            7824    C+G   ...Gigabyte\AppCenter\ApCent.exe      N/A      |
+|    0   N/A  N/A            7888    C+G   C:\Windows\explorer.exe               N/A      |
+|    0   N/A  N/A            8280    C+G   ...IA App\CEF\NVIDIA Overlay.exe      N/A      |
+|    0   N/A  N/A            8288    C+G   ...Chrome\Application\chrome.exe      N/A      |
+|    0   N/A  N/A            8912    C+G   ...xyewy\ShellExperienceHost.exe      N/A      |
+|    0   N/A  N/A            8980    C+G   ...IA App\CEF\NVIDIA Overlay.exe      N/A      |
+|    0   N/A  N/A           10588    C+G   ...h_cw5n1h2txyewy\SearchApp.exe      N/A      |
+|    0   N/A  N/A           15688    C+G   ...8wekyb3d8bbwe\M365Copilot.exe      N/A      |
+|    0   N/A  N/A           16112    C+G   ....0.3856.84\msedgewebview2.exe      N/A      |
+|    0   N/A  N/A           17012    C+G   ...\cef.win64\steamwebhelper.exe      N/A      |
++-----------------------------------------------------------------------------------------+
+PS C:\Users\negocio\Desktop\LLM-BUBBLE> pip uninstall torch torchvision torchaudio -y
+Found existing installation: torch 2.11.0
+Uninstalling torch-2.11.0:
+  Successfully uninstalled torch-2.11.0
+WARNING: Skipping torchvision as it is not installed.
+WARNING: Skipping torchaudio as it is not installed.
+PS C:\Users\negocio\Desktop\LLM-BUBBLE> pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+Looking in indexes: https://download.pytorch.org/whl/cu118
+ERROR: Could not find a version that satisfies the requirement torch (from versions: none)
+
+[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] To update, run: C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\python.exe -m pip install --upgrade pip
+ERROR: No matching distribution found for torch
+PS C:\Users\negocio\Desktop\LLM-BUBBLE> pip uninstall torch torchvision torchaudio -y
+WARNING: Skipping torch as it is not installed.
+WARNING: Skipping torchvision as it is not installed.
+WARNING: Skipping torchaudio as it is not installed.
+PS C:\Users\negocio\Desktop\LLM-BUBBLE> pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+Looking in indexes: https://download.pytorch.org/whl/cu121
+ERROR: Could not find a version that satisfies the requirement torch (from versions: none)
+
+[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] To update, run: C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\python.exe -m pip install --upgrade pip
+ERROR: No matching distribution found for torch
+PS C:\Users\negocio\Desktop\LLM-BUBBLE> python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))
+    ^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'torch'
+PS C:\Users\negocio\Desktop\LLM-BUBBLE> pip install --upgrade bitsandbytes
+Requirement already satisfied: bitsandbytes in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (0.49.2)
+Collecting torch<3,>=2.3 (from bitsandbytes)
+  Using cached torch-2.11.0-cp314-cp314-win_amd64.whl.metadata (29 kB)
+Requirement already satisfied: numpy>=1.17 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from bitsandbytes) (2.4.4)
+Requirement already satisfied: packaging>=20.9 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from bitsandbytes) (26.0)
+Requirement already satisfied: filelock in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from torch<3,>=2.3->bitsandbytes) (3.25.2)
+Requirement already satisfied: typing-extensions>=4.10.0 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from torch<3,>=2.3->bitsandbytes) (4.15.0)
+Requirement already satisfied: setuptools<82 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from torch<3,>=2.3->bitsandbytes) (81.0.0)
+Requirement already satisfied: sympy>=1.13.3 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from torch<3,>=2.3->bitsandbytes) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from torch<3,>=2.3->bitsandbytes) (3.6.1)
+Requirement already satisfied: jinja2 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from torch<3,>=2.3->bitsandbytes) (3.1.6)
+Requirement already satisfied: fsspec>=0.8.5 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from torch<3,>=2.3->bitsandbytes) (2026.3.0)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from sympy>=1.13.3->torch<3,>=2.3->bitsandbytes) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (from jinja2->torch<3,>=2.3->bitsandbytes) (3.0.3)
+Using cached torch-2.11.0-cp314-cp314-win_amd64.whl (114.6 MB)
+Installing collected packages: torch
+  WARNING: The scripts torchfrtrace.exe and torchrun.exe are installed in 'C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\Scripts' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+Successfully installed torch-2.11.0
+
+[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] To update, run: C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\python.exe -m pip install --upgrade pip
+PS C:\Users\negocio\Desktop\LLM-BUBBLE> pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+Looking in indexes: https://download.pytorch.org/whl/cu121
+Requirement already satisfied: torch in c:\users\negocio\appdata\local\python\pythoncore-3.14-64\lib\site-packages (2.11.0)
+Collecting torchvision
+  Downloading https://download-r2.pytorch.org/whl/torchvision-0.2.0-py2.py3-none-any.whl (48 kB)
+ERROR: Could not find a version that satisfies the requirement torchaudio (from versions: none)
+
+[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] To update, run: C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\python.exe -m pip install --upgrade pip
+ERROR: No matching distribution found for torchaudio
+PS C:\Users\negocio\Desktop\LLM-BUBBLE> python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+False
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))
+                                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\cuda\__init__.py", line 653, in get_device_name
+    return get_device_properties(device).name
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\cuda\__init__.py", line 686, in get_device_properties
+    _lazy_init()  # will define _get_device_properties
+    ~~~~~~~~~~^^
+  File "C:\Users\negocio\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\cuda\__init__.py", line 471, in _lazy_init
+    raise AssertionError("Torch not compiled with CUDA enabled")
+AssertionError: Torch not compiled with CUDA enabled
+PS C:\Users\negocio\Desktop\LLM-BUBBLE>
