@@ -1,0 +1,44 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+venv312/
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# LLM-BUBBLE specific
+*.npy
+.ruff_cache/
+embeddings/softmax/
+embeddings/plateau/
+embeddings/raw_input.npy
+embeddings/attention_mask.npy
+embeddings/metadata.json
+plots/
+results/
+
+# Environment
+.env
+.env.local
+
+# Internal planning (contains system paths)
+.sisyphus/
