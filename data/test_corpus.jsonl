@@ -1,0 +1,50 @@
+{"text": "Explain the concept of optimal transport in machine learning and how it relates to attention mechanisms in transformer models."}
+{"text": "Write a Python function that implements the Sinkhorn-Knopp algorithm for matrix scaling with numerical stability guarantees."}
+{"text": "The geometry of high-dimensional spaces reveals surprising properties about distance concentration and manifold structure in neural network representations."}
+{"text": "¿Cuál es la diferencia entre transporte óptimo entrópico y transporte óptimo clásico en el contexto de transformers y atención?"}
+{"text": "Compare and contrast softmax attention with doubly-stochastic attention in transformer architectures, focusing on computational complexity."}
+{"text": "def fibonacci(n): return n if n <= 1 else fibonacci(n-1) + fibonacci(n-2)"}
+{"text": "The Dirichlet energy minimization problem seeks functions that minimize the integral of the squared gradient norm over a domain."}
+{"text": "In the context of minimal surface theory, a soap film spanning a wire frame naturally finds the surface of least area connecting the boundary."}
+{"text": "Analyze the computational complexity of the Sinkhorn algorithm and discuss its convergence properties for large-scale optimal transport problems."}
+{"text": "What are the key architectural differences between Qwen 3.5 and Qwen 3.6? Focus on the attention mechanism, hybrid design, and sparse MoE routing."}
+{"text": "The Plateau laws govern the geometry of soap films: three films meet at 120-degree angles along curves, and four curves meet at tetrahedral angles."}
+{"text": "Implement a minimal surface attention mechanism using PyTorch that replaces the standard softmax in transformer layers with Sinkhorn normalization."}
+{"text": "Discuss how entropic regularization affects the geometry of optimal transport plans and the resulting sparsity patterns in attention distributions."}
+{"text": "How does the effective rank of embedding matrices change when using different attention mechanisms? What does this tell us about representational capacity?"}
+{"text": "The Wasserstein distance provides a natural metric between probability distributions that respects the underlying geometry of the space."}
+{"text": "Explain the relationship between the Sinkhorn algorithm and the Schrödinger bridge problem in the context of entropic optimal transport."}
+{"text": "What role does the viscosity coefficient epsilon play in entropic optimal transport and how does it affect the sparsity of the resulting transport plan?"}
+{"text": "Design an experiment to measure the concentration of embeddings produced by different attention mechanisms in transformer models across multiple layers."}
+{"text": "The intrinsic dimensionality of neural network representations provides insight into the true complexity of learned features and the geometry of the data manifold."}
+{"text": "Compare the anisotropy of embeddings from standard transformers versus those using optimal transport-based attention. Which produces more uniform representations?"}
+{"text": "def attention(q, k, v): return torch.softmax(q @ k.T / math.sqrt(d), dim=-1) @ v"}
+{"text": "The Euler-Lagrange equation characterizes functions that extremize functionals. In the context of minimal surfaces, it leads to the mean curvature equation."}
+{"text": "Explique el concepto de regularización entrópica en el contexto del transporte óptimo y su aplicación en mecanismos de atención para modelos de lenguaje."}
+{"text": "How do the singular values of the attention matrix change as we vary the epsilon parameter in Sinkhorn normalization? What does this reveal about the embedding geometry?"}
+{"text": "The Laplace-Beltrami operator generalizes the Laplacian to Riemannian manifolds and plays a central role in geometric deep learning and spectral analysis."}
+{"text": "Write a detailed comparison between the computational complexity of standard O(N²) attention and the proposed O(N·k·τ) complexity of Bubble Attention with Sinkhorn."}
+{"text": "What is the relationship between the Plateau problem in differential geometry and the problem of finding optimal attention patterns in transformer models?"}
+{"text": "Implement a function that computes the effective rank of a matrix using SVD and Shannon entropy of the singular value distribution."}
+{"text": "The Maximum Likelihood Estimator for intrinsic dimensionality, proposed by Levina and Bickel, uses k-nearest neighbor distances to estimate the manifold dimension."}
+{"text": "¿Cómo se puede medir la concentración de embeddings en un transformer? ¿Qué métricas son más informativas para evaluar la calidad de las representaciones?"}
+{"text": "class TransformerBlock(nn.Module):\n    def __init__(self, d_model, n_heads):\n        super().__init__()\n        self.attn = nn.MultiheadAttention(d_model, n_heads)\n        self.ffn = nn.Sequential(nn.Linear(d_model, 4*d_model), nn.GELU(), nn.Linear(4*d_model, d_model))\n        self.norm1 = nn.LayerNorm(d_model)\n        self.norm2 = nn.LayerNorm(d_model)"}
+{"text": "The heat equation on a manifold describes how temperature diffuses over time. Its solution is related to the Laplace-Beltrami operator and has deep connections to optimal transport."}
+{"text": "Analyze how the attention patterns change when replacing softmax with Sinkhorn normalization. Do the resulting attention matrices exhibit more interpretable structure?"}
+{"text": "What are the theoretical guarantees of the Sinkhorn-Knopp algorithm? Under what conditions does it converge, and how fast?"}
+{"text": "The concept of a 'soap film' in mathematics is formalized as a minimal surface — a surface that locally minimizes its area. This is equivalent to having zero mean curvature everywhere."}
+{"text": "def sinkhorn(C, epsilon, max_iter=100):\n    K = torch.exp(-C / epsilon)\n    u = torch.ones(K.shape[0])\n    v = torch.ones(K.shape[1])\n    for _ in range(max_iter):\n        u = 1.0 / (K @ v)\n        v = 1.0 / (K.T @ u)\n    return torch.diag(u) @ K @ torch.diag(v)"}
+{"text": "How does the choice of cost function in optimal transport affect the resulting attention patterns? Compare L2, cosine, and learned cost matrices."}
+{"text": "The geometry of attention: can we interpret the softmax operation as finding a Gibbs distribution over token pairs? What happens when we replace it with a doubly-stochastic constraint?"}
+{"text": "Explora la relación entre la tensión superficial en películas de jabón y la matriz de costo en mecanismos de atención. ¿Es válida esta analogía física?"}
+{"text": "What is the connection between the Sinkhorn divergence and the attention mechanism? Can we derive attention from first principles of optimal transport?"}
+{"text": "The Ricci curvature of a manifold influences how geodesics converge or diverge. In the context of embedding spaces, this relates to how similar tokens cluster together."}
+{"text": "Implement a benchmark that compares the inference speed and memory usage of standard attention vs Sinkhorn attention for sequences of length 128, 256, 512, 1024, and 2048."}
+{"text": "How do the eigenvalues of the attention matrix spectrum change across layers in a transformer? Is there a systematic evolution from uniform to sparse attention?"}
+{"text": "The Monge-Kantorovich problem of optimal transport has seen a revolution through entropic regularization. How does this mathematical framework apply to neural attention?"}
+{"text": "¿Es posible entrenar un transformer completamente con atención basada en transporte óptimo? ¿Cuáles serían los desafíos de entrenamiento y convergencia?"}
+{"text": "The Fisher information metric defines a Riemannian geometry on the space of probability distributions. How does this relate to the geometry induced by attention mechanisms?"}
+{"text": "Write a comprehensive survey of all attention mechanisms that replace or modify softmax: linear attention, Performer, Nyströmformer, Sinkformer, and Bubble Attention."}
+{"text": "The concentration of measure phenomenon in high dimensions says that most of the volume of a high-dimensional sphere is concentrated near the equator. How does this affect embedding distributions?"}
+{"text": "def compute_anisotropy(embeddings):\n    centered = embeddings - embeddings.mean(dim=0)\n    cov = centered.T @ centered / len(centered)\n    eigenvalues = torch.linalg.eigvalsh(cov)\n    return eigenvalues[-1] / eigenvalues.sum()"}
+{"text": "What happens to the gradient flow during backpropagation through a Sinkhorn layer? Is the iterative differentiation stable, or does it suffer from vanishing/exploding gradients?"}
