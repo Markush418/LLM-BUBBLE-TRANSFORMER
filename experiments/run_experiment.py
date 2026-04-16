@@ -53,8 +53,8 @@ def main():
         "--mode",
         type=str,
         default="auto",
-        choices=["auto", "mock", "real"],
-        help="Embedding mode: auto (detect), mock, or real",
+        choices=["auto", "mock", "real", "tension", "layer-selection"],
+        help="Experiment mode: auto (detect), mock, real, tension (dual-head sweep), layer-selection",
     )
     parser.add_argument(
         "--d-model", type=int, default=None, help="Model hidden dimension (mock only)"
@@ -106,7 +106,73 @@ def main():
         default=None,
         help="Custom target layers",
     )
+    parser.add_argument(
+        "--cost-type",
+        type=str,
+        default="l2_sq",
+        choices=[
+            "l2_sq",
+            "cosine",
+            "dot_product",
+            "mahalanobis",
+            "mesh_learnable",
+            "all",
+        ],
+        help="Cost function type for PlateauAttention (default: l2_sq)",
+    )
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
+    # V4 Bubble Transformer arguments
+    parser.add_argument(
+        "--v4",
+        action="store_true",
+        help="Enable V4 (FPS + Expert-Choice routing)",
+    )
+    parser.add_argument(
+        "--num-experts",
+        type=int,
+        default=32,
+        help="Number of experts/centroids for V4 routing (default: 32)",
+    )
+    parser.add_argument(
+        "--top-k",
+        type=int,
+        default=8,
+        help="Tokens per expert in Expert-Choice routing (default: 8)",
+    )
+    parser.add_argument(
+        "--no-fps-init",
+        action="store_true",
+        help="Disable FPS initialization (use random centroids)",
+    )
+    # GOAT arguments
+    parser.add_argument(
+        "--goat",
+        action="store_true",
+        help="Enable GOAT (Gated Optimal Attention Transport)",
+    )
+    parser.add_argument(
+        "--no-learn-gates", action="store_true", help="Disable gate learning in GOAT"
+    )
+    parser.add_argument(
+        "--gate-lr", type=float, default=0.01, help="GOAT gate learning rate"
+    )
+    # New metric flags
+    parser.add_argument(
+        "--spectral-metrics",
+        action="store_true",
+        default=True,
+        help="Enable spectral metrics (SIGMA paper)",
+    )
+    parser.add_argument(
+        "--crowding-metrics",
+        action="store_true",
+        default=True,
+        help="Enable crowding metrics",
+    )
+    # Output format
+    parser.add_argument(
+        "--json-output", action="store_true", help="Output results as JSON"
+    )
     args = parser.parse_args()
 
     # ─── Detect Mode ──────────────────────────────────────────────────────
@@ -129,6 +195,8 @@ def main():
     print("  PLAN A+B: Embedding Geometry + Epsilon Sweet Spot Experiment")
     print(f"  Bubble Transformer Research — LLM-BUBBLE ({mode_label})")
     print("=" * 70)
+    if args.cost_type != "l2_sq":
+        print(f"  Cost function: {args.cost_type}")
     print()
 
     start_time = time.time()
@@ -183,7 +251,12 @@ def main():
     # ─── Step 2: Run Epsilon Sweep ────────────────────────────────────────
     print("[Step 2/4] Running epsilon sweep experiment...")
     print("-" * 50)
+    from plateau_attention import VALID_COST_TYPES
     from epsilon_sweep import run_epsilon_sweep
+
+    cost_types = ["l2_sq"] if args.cost_type == "l2_sq" else [args.cost_type]
+    if args.cost_type == "all":
+        cost_types = VALID_COST_TYPES
 
     sweep_results = run_epsilon_sweep(
         embeddings_dir=args.embeddings_dir,
@@ -192,12 +265,183 @@ def main():
         target_layers=args.target_layers,
         d_model=args.d_model,
         num_heads=args.num_heads,
+        cost_types=cost_types,
     )
 
     if not sweep_results:
         print("[Step 2] ERROR: Sweep failed!")
         sys.exit(1)
     print(f"[Step 2] Done! {len(sweep_results.get('results', []))} results collected\n")
+
+    # ─── Step 2b: Handle Special Modes (tension, layer-selection) ────────
+    # These modes have their own visualization and report generation
+    if args.mode == "tension":
+        print("[Step 2b/4] Running tension sweep (dual-head comparison)...")
+        print("-" * 50)
+        from epsilon_sweep import run_tension_sweep
+
+        tension_results = run_tension_sweep(
+            embeddings_dir=args.embeddings_dir,
+            output_dir=args.output_dir,
+            target_layers=args.target_layers,
+            d_model=args.d_model,
+            num_heads=args.num_heads,
+        )
+
+        if not tension_results:
+            print("[Step 2b] ERROR: Tension sweep failed!")
+            sys.exit(1)
+        print(
+            f"[Step 2b] Done! {len(tension_results.get('results', []))} results collected\n"
+        )
+
+        # Generate visualizations
+        if not args.skip_visualization:
+            print("[Step 3/4] Generating tension visualizations...")
+            print("-" * 50)
+            from visualize import plot_tension_analysis
+
+            tension_path = Path(args.output_dir) / "tension_sweep.json"
+            if tension_path.exists():
+                plot_tension_analysis(str(tension_path))
+                print()
+            else:
+                print("[Warn] tension_sweep.json not found, skipping tension plots")
+
+        # Generate report
+        print("[Step 4/4] Tension sweep complete. See results/tension_sweep.json")
+        elapsed = time.time() - start_time
+        print(f"\n Tension sweep finished in {elapsed:.1f}s")
+        print(f" Results: {tension_path}")
+        print(f" Plots: plots/")
+        print()
+        return  # Skip normal epsilon sweep visualizations and report
+
+    if args.mode == "layer-selection":
+        print("[Step 3/4] Running layer selection analysis...")
+        print("-" * 50)
+        from epsilon_sweep import run_layer_selection
+        from visualize import plot_layer_selection
+
+        # Determine best parameters from previous sweeps if available
+        # Use dot_product cost (Plan E winner) and epsilon=0.001 (Plan A+B winner) by default
+        best_cost = "dot_product"
+        best_epsilon = 0.001
+
+        # Try to read from existing epsilon_sweep.json to auto-determine best parameters
+        sweep_json = Path(args.output_dir) / "epsilon_sweep.json"
+        if sweep_json.exists():
+            try:
+                with open(sweep_json, "r") as f:
+                    sweep_data = json.load(f)
+                sweet_spot = sweep_data.get("sweet_spot", {})
+                if sweet_spot.get("epsilon"):
+                    best_epsilon = sweet_spot["epsilon"]
+                    print(
+                        f"[LayerSelect] Using epsilon from sweet spot: {best_epsilon}"
+                    )
+                # For cost type, check if there is a best_cost_type in sweet_spot
+                if sweet_spot.get("best_cost_type"):
+                    best_cost = sweet_spot["best_cost_type"]
+                    print(f"[LayerSelect] Using cost type from sweet spot: {best_cost}")
+            except Exception as e:
+                print(f"[LayerSelect] Could not read epsilon_sweep.json: {e}")
+
+        # Get config for layer selection settings (dual-head, alpha values)
+        try:
+            from config import get_config
+
+            cfg = get_config()
+        except Exception:
+            cfg = None
+
+        # Run layer selection
+        ls_results = run_layer_selection(
+            embeddings_dir=args.embeddings_dir,
+            output_dir=args.output_dir,
+            d_model=args.d_model,
+            num_heads=args.num_heads,
+            cost_type=best_cost,
+            epsilon_plateau=best_epsilon,
+            config=cfg,
+        )
+
+        if not ls_results:
+            print("[Step 3] ERROR: Layer selection failed!")
+            sys.exit(1)
+
+        # Generate visualizations
+        if not args.skip_visualization:
+            print("\n[Step 4/4] Generating layer selection visualizations...")
+            print("-" * 50)
+            plot_layer_selection(str(Path(args.output_dir) / "layer_selection.json"))
+            print()
+        else:
+            print("\n[Step 4/4] Skipping layer selection visualizations")
+
+        # Generate markdown report
+        print("[Step 5/5] Writing layer selection report...")
+        print("-" * 50)
+        report_path = Path(args.output_dir) / "layer_selection_report.md"
+        ranked = ls_results.get("ranked_layers", [])
+        optimal_alpha = ls_results.get("optimal_alpha")
+        baseline = ls_results.get("baseline", {})
+        plateau = ls_results.get("plateau", {})
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write("# Layer Selection Report\n\n")
+            f.write(f"**Experiment**: Plan D — Layer Selection\n")
+            f.write(f"**Date**: {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            f.write("## Recommended Configuration\n\n")
+            f.write("| Parameter | Value |\n")
+            f.write("|-----------|-------|\n")
+            f.write(f"| **Cost Function** | `{best_cost}` |\n")
+            f.write(f"| **Epsilon** | `{best_epsilon}` |\n")
+            ranked_str = ", ".join(map(str, ranked))
+            f.write(f"| **Layers to Replace** | `{ranked_str}` |\n")
+            if optimal_alpha is not None:
+                f.write(f"| **Dual-Head α** | `{optimal_alpha}` |\n\n")
+            else:
+                f.write(f"| **Dual-Head α** | `N/A (use single-head)` |\n\n")
+            f.write("## Evidence\n\n")
+            f.write(
+                "| Layer | Rank Improvement | Concentration Gain | Intrinsic Dim Pres. |\n"
+            )
+            f.write(
+                "|-------|------------------|-------------------|--------------------|\n"
+            )
+            for l in ranked:
+                b = baseline.get(l, {})
+                p = plateau.get(l, {})
+                if not b or not p:
+                    continue
+                rank_imp = (
+                    (p["effective_rank"] - b["effective_rank"])
+                    / b["effective_rank"]
+                    * 100
+                )
+                b_conc = b.get("concentration_ratio", 0)
+                p_conc = p.get("concentration_ratio", 0)
+                conc_gain = (p_conc - b_conc) / max(b_conc, 1e-6) * 100
+                dim_pres = p["intrinsic_dim_mle"] / b["intrinsic_dim_mle"] * 100
+                f.write(
+                    f"| {l} | {rank_imp:+.1f}% | {conc_gain:+.1f}% | {dim_pres:.1f}% |\n"
+                )
+            f.write("\n")
+        print(f"[Step 5] Report saved to {report_path}\n")
+
+        # Summary
+        print("=" * 70)
+        print("  LAYER SELECTION COMPLETE")
+        print("=" * 70)
+        print(f"\n  Recommended layers to replace: {ranked}")
+        print(f"  Configuration: epsilon={best_epsilon}, cost={best_cost}")
+        if optimal_alpha is not None:
+            print(f"  Optional Dual-Head alpha: {optimal_alpha}")
+        print(f"\n  Results: results/layer_selection.json")
+        print(f"  Report:  results/layer_selection_report.md")
+        print(f"  Plots:   plots/layer_selection_*.png")
+        print()
+        return  # Exit early; no further steps
 
     # ─── Step 3: Generate Visualizations ──────────────────────────────────
     if not args.skip_visualization:
@@ -267,6 +511,62 @@ def main():
                 f"{scores.get('intrinsic_dim_mle', 0):.1f} | {met} |\n"
             )
 
+        # Cost Function Comparison section (if multiple cost types were swept)
+        cost_types_in_results = set(
+            r.get("cost_type", "l2_sq") for r in data.get("results", [])
+        )
+        if len(cost_types_in_results) > 1:
+            f.write("\n---\n\n## Cost Function Comparison\n\n")
+            f.write(
+                "| Cost Type | Best eps | Concentration | Eff. Rank | Anisotropy | Score |\n"
+            )
+            f.write(
+                "|-----------|----------|---------------|-----------|------------|-------|\n"
+            )
+
+            # Group by cost_type and find best for each
+            cost_best = {}
+            for r in data.get("results", []):
+                ct = r.get("cost_type", "l2_sq")
+                if r.get("epsilon", 0) <= 0:
+                    continue
+                score = (
+                    r.get("concentration_ratio", 1.0)
+                    - r.get("effective_rank", 0) / 1000
+                )
+                if ct not in cost_best or score < cost_best[ct]["score"]:
+                    cost_best[ct] = {**r, "score": score}
+
+            for ct in sorted(cost_best.keys()):
+                best = cost_best[ct]
+                f.write(
+                    f"| {ct} | {best.get('epsilon', 0):.3f} | "
+                    f"{best.get('concentration_ratio', 0):.4f} | "
+                    f"{best.get('effective_rank', 0):.1f} | "
+                    f"{best.get('anisotropy_index', 0):.4f} | "
+                    f"{best.get('score', 0):.4f} |\n"
+                )
+
+            # Recommendation
+            if cost_best:
+                best_overall = min(cost_best.values(), key=lambda x: x["score"])
+                f.write(f"\n### Recommendation\n\n")
+                f.write(
+                    f"**{best_overall.get('cost_type', 'N/A')}** is the recommended cost function because:\n\n"
+                )
+                f.write(
+                    f"1. It achieves the best concentration/expressivity trade-off (score: {best_overall.get('score', 0):.4f})\n"
+                )
+                f.write(
+                    f"2. Optimal epsilon: **{best_overall.get('epsilon', 0):.3f}**\n"
+                )
+                f.write(
+                    f"3. Concentration ratio: **{best_overall.get('concentration_ratio', 0):.4f}**\n"
+                )
+                f.write(
+                    f"4. Effective rank: **{best_overall.get('effective_rank', 0):.1f}**\n"
+                )
+
         f.write("\n## Interpretation\n\n")
         f.write(
             f"**eps = {sweet_spot.get('epsilon')}** is the optimal viscosity coefficient because:\n\n"
@@ -293,6 +593,11 @@ def main():
         f.write(
             f"the best concentration/expressivity trade-off for Bubble Attention.\n"
         )
+
+        if len(cost_types_in_results) > 1:
+            f.write(
+                f"\n**See also**: `plots/cost_comparison_pareto.png` for visual Pareto frontier comparison.\n"
+            )
 
     print(f"[Step 4] Report saved to {report_path}\n")
 

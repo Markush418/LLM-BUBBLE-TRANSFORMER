@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-bubble"
+version = "0.1.0"
+description = "Bubble Transformer Research — Embedding Geometry Analysis + ε Sweet Spot Discovery"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.12"
+dependencies = [
+    "torch==2.11.0",
+    "transformers==4.51.0",
+    "accelerate==1.5.0",
+    "numpy==2.2.3",
+    "scipy==1.15.2",
+    "matplotlib==3.10.1",
+    "seaborn==0.13.2",
+    "scikit-learn==1.6.1",
+    "umap-learn==0.5.7",
+    "tqdm==4.67.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.setuptools.packages.find]
+include = ["experiments*"]

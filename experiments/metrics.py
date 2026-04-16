@@ -12,6 +12,18 @@ from typing import Dict, Optional
 from scipy.spatial.distance import pdist as scipy_pdist
 from scipy.spatial.distance import squareform
 
+# Spectral metrics (SIGMA paper - arXiv:2601.03385)
+try:
+    from .spectral_metrics import compute_all_spectral_metrics
+except ImportError:
+    from spectral_metrics import compute_all_spectral_metrics
+
+# Crowding metrics (embedding space analysis)
+try:
+    from .crowding_metric import compute_all_crowding_metrics
+except ImportError:
+    from crowding_metric import compute_all_crowding_metrics
+
 
 def effective_rank(embeddings: np.ndarray) -> float:
     """
@@ -66,7 +78,13 @@ def anisotropy_index(embeddings: np.ndarray) -> float:
         embeddings = embeddings.reshape(-1, embeddings.shape[-1])
     centered = embeddings - embeddings.mean(axis=0, keepdims=True)
     cov = (centered.T @ centered) / centered.shape[0]
-    eigenvalues = np.linalg.eigvalsh(cov.astype(np.float32))
+    # Add regularization for numerical stability
+    cov_reg = cov + np.eye(cov.shape[0]) * 1e-6
+    try:
+        eigenvalues = np.linalg.eigvalsh(cov_reg.astype(np.float32))
+    except np.linalg.LinAlgError:
+        # Fallback: use SVD if eigvalsh fails
+        eigenvalues = np.linalg.svd(cov_reg.astype(np.float32), compute_uv=False)
     eigenvalues = eigenvalues[eigenvalues > 0]
     if len(eigenvalues) == 0:
         return 1.0
@@ -133,9 +151,19 @@ def compute_all_metrics(
     embeddings: np.ndarray,
     attention_matrix: Optional[np.ndarray] = None,
     baseline_effective_rank: Optional[float] = None,
+    attention_low: Optional[np.ndarray] = None,
+    attention_high: Optional[np.ndarray] = None,
 ) -> Dict[str, float]:
-    """Compute all concentration and geometry metrics at once."""
+    """Compute all concentration and geometry metrics at once.
+
+    Includes:
+    - Standard metrics (effective_rank, intrinsic_dim, anisotropy, pairwise distances)
+    - Spectral metrics (SIGMA paper - collapse detection via Gram matrix eigenspectrum)
+    - Crowding metrics (embedding space crowding analysis)
+    """
     metrics = {}
+
+    # ─── Standard Metrics ─────────────────────────────────────────────────────
     metrics["effective_rank"] = effective_rank(embeddings)
     if baseline_effective_rank is not None:
         metrics["effective_rank_ratio"] = (
@@ -148,9 +176,35 @@ def compute_all_metrics(
     dist_stats = pairwise_distance_stats(embeddings)
     for key, val in dist_stats.items():
         metrics[f"pairwise_dist_{key}"] = val
+
+    # ─── Spectral Metrics (SIGMA paper) ────────────────────────────────────────────────
+    try:
+        spectral = compute_all_spectral_metrics(embeddings)
+        metrics.update(spectral)
+    except Exception as e:
+        # Fallback: spectral metrics are critical but we continue on error
+        metrics["spectral_log_det"] = 0.0
+        metrics["collapse_score"] = 0.0
+        metrics["spectral_error"] = float(str(e))
+
+    # ─── Crowding Metrics ────────────────────────────────────���───────────────
+    try:
+        crowding = compute_all_crowding_metrics(embeddings)
+        metrics.update(crowding)
+    except Exception as e:
+        # Fallback: crowding metrics are supplementary
+        metrics["crowding_ratio_k10"] = 0.0
+        metrics["crowding_error"] = float(str(e))
+
+    # ─── Attention Metrics ────────────────────────────────────────────────────
     if attention_matrix is not None:
+        metrics["cost_condition_number"] = cost_condition_number(attention_matrix)
+        metrics["cost_spectral_gap"] = cost_spectral_gap(attention_matrix)
         metrics["concentration_ratio"] = concentration_ratio(attention_matrix)
         metrics["attention_entropy"] = attention_entropy(attention_matrix)
+    if attention_low is not None and attention_high is not None:
+        metrics["tension_balance"] = tension_balance(attention_low, attention_high)
+
     return metrics
 
 
@@ -174,6 +228,55 @@ def compute_metrics_batch(
         metrics["layer"] = layer_idx
         results.append(metrics)
     return results
+
+
+def cost_condition_number(cost_matrix: np.ndarray) -> float:
+    """
+    Condition number of cost matrix via SVD: sigma_max / sigma_min.
+    Higher = more ill-conditioned. Indicates numerical stability of Sinkhorn.
+    cost_matrix: [B, heads, N, N] or [N, N]
+    """
+    if cost_matrix.ndim > 2:
+        # Average over batch and heads
+        cost_matrix = cost_matrix.mean(axis=tuple(range(cost_matrix.ndim - 2)))
+    _, S, _ = np.linalg.svd(cost_matrix.astype(np.float32), full_matrices=False)
+    S = S[S > 1e-10]
+    if len(S) == 0:
+        return float("inf")
+    return float(S[0] / S[-1])
+
+
+def cost_spectral_gap(cost_matrix: np.ndarray) -> float:
+    """
+    Spectral gap of cost matrix: sigma_1 / sigma_2.
+    Higher = more dominant principal component. Indicates cost matrix rank structure.
+    cost_matrix: [B, heads, N, N] or [N, N]
+    """
+    if cost_matrix.ndim > 2:
+        cost_matrix = cost_matrix.mean(axis=tuple(range(cost_matrix.ndim - 2)))
+    _, S, _ = np.linalg.svd(cost_matrix.astype(np.float32), full_matrices=False)
+    S = S[S > 1e-10]
+    if len(S) < 2:
+        return float(S[0]) if len(S) == 1 else 0.0
+    return float(S[0] / S[1])
+
+
+def tension_balance(attention_low: np.ndarray, attention_high: np.ndarray) -> float:
+    """
+    Measures how different the two attention patterns are.
+    0.0 = identical patterns (no tension)
+    1.0 = maximally different (maximum tension)
+
+    Computed as 1 - cosine_similarity(flatten(A_low), flatten(A_high))
+    """
+    a = attention_low.flatten().astype(np.float32)
+    b = attention_high.flatten().astype(np.float32)
+    norm_a = np.linalg.norm(a)
+    norm_b = np.linalg.norm(b)
+    if norm_a < 1e-10 or norm_b < 1e-10:
+        return 0.0
+    cos_sim = np.dot(a, b) / (norm_a * norm_b)
+    return float(1.0 - np.clip(cos_sim, -1.0, 1.0))
 
 
 if __name__ == "__main__":
@@ -208,5 +311,12 @@ if __name__ == "__main__":
     print(f"\n  All metrics:")
     for key, val in all_metrics.items():
         print(f"    {key}: {val:.4f}")
+
+    # Test cost metrics
+    cost_mat = np.random.randn(32, 32).astype(np.float32) ** 2  # Non-negative
+    cn = cost_condition_number(cost_mat)
+    sg = cost_spectral_gap(cost_mat)
+    print(f"  Cost Condition Number: {cn:.4f}")
+    print(f"  Cost Spectral Gap: {sg:.4f}")
 
     print("\n[Metrics] All numpy tests passed!")

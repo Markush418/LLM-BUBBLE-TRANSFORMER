@@ -10,3 +10,4 @@ seaborn==0.13.2
 scikit-learn==1.6.1
 umap-learn==0.5.7
 tqdm==4.67.1
+geoopt==0.5.1

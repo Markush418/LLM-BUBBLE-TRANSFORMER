@@ -135,7 +135,8 @@ class QwenEmbeddingExtractor:
         else:
             hidden_states = output
         # Move to CPU immediately to save VRAM
-        self.layer_outputs[layer_idx] = hidden_states.cpu()
+        # Convert to float32 to prevent overflow from quantization artifacts
+        self.layer_outputs[layer_idx] = hidden_states.float().cpu()
 
     def _get_memory_usage(self) -> str:
         """Return current GPU memory usage string."""
@@ -169,11 +170,11 @@ class QwenEmbeddingExtractor:
         with torch.no_grad():
             self.model(input_ids=input_ids, attention_mask=attention_mask)
 
-        # Convert to numpy
+        # Convert to numpy (float32 for numerical stability)
         result = {}
         for layer_idx, hidden in self.layer_outputs.items():
-            # hidden: [B, N, D] — already on CPU from hook
-            result[layer_idx] = hidden.numpy()
+            # hidden: [B, N, D] — already on CPU from hook, float32
+            result[layer_idx] = hidden.numpy().astype(np.float32)
 
         return result
 

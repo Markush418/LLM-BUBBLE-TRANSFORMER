@@ -22,7 +22,7 @@ from typing import Dict, List, Optional
 import numpy as np
 from tqdm import tqdm
 
-from plateau_attention import PlateauAttentionMechanism
+from plateau_attention import PlateauAttentionMechanism, DualHeadPlateauAttention
 from metrics import compute_all_metrics
 
 EPSILON_VALUES = [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0]
@@ -44,7 +44,11 @@ def load_embeddings(embeddings_dir: str, layer_idx: int) -> Optional[np.ndarray]
 def load_raw_input(embeddings_dir: str) -> Optional[np.ndarray]:
     path = Path(embeddings_dir) / "raw_input.npy"
     if path.exists():
-        return np.load(path)
+        raw = np.load(path)
+        # Handle 2D embeddings from real extraction: (total_tokens, D) -> (1, N, D)
+        if raw.ndim == 2:
+            raw = raw.reshape(1, raw.shape[0], raw.shape[1])
+        return raw
     return None
 
 
@@ -55,8 +59,10 @@ def run_epsilon_sweep(
     target_layers: List[int] = None,
     d_model: int = None,  # Auto-detect if None
     num_heads: int = None,  # Auto-detect if None
+    cost_types: List[str] = None,  # Cost function types (currently uses l2_sq)
 ) -> Dict:
     epsilon_values = epsilon_values or EPSILON_VALUES
+    cost_types = cost_types or ["l2_sq"]  # Currently only l2_sq supported
     if target_layers is None:
         # Auto-detect based on available layers
         softmax_dir = Path(embeddings_dir) / "softmax"
@@ -81,6 +87,7 @@ def run_epsilon_sweep(
 
     # Auto-detect d_model and num_heads from metadata
     metadata_path = Path(embeddings_dir) / "metadata.json"
+    mode = "mock_numpy"  # Default mode
     if metadata_path.exists():
         with open(metadata_path, "r") as f:
             meta = json.load(f)
@@ -88,7 +95,7 @@ def run_epsilon_sweep(
             d_model = meta.get("d_model", DEFAULT_D_MODEL)
         if num_heads is None:
             num_heads = meta.get("num_attention_heads", DEFAULT_NUM_HEADS)
-        mode = meta.get("mode", "unknown")
+        mode = meta.get("mode", "mock_numpy")
         print(f"[Sweep] Detected mode: {mode} (d_model={d_model}, heads={num_heads})")
     else:
         if d_model is None:
@@ -178,7 +185,7 @@ def run_epsilon_sweep(
     full_results = {
         "experiment": "Plan A+B: Embedding Geometry + Epsilon Sweet Spot",
         "date": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "mode": "mock_numpy",
+        "mode": mode,
         "config": {
             "epsilon_values": epsilon_values,
             "target_layers": target_layers,
@@ -276,6 +283,299 @@ def identify_sweet_spot(
             str(k): {kk: float(vv) for kk, vv in v.items()}
             for k, v in epsilon_scores.items()
         },
+    }
+
+
+def run_tension_sweep(
+    embeddings_dir: str = "embeddings",
+    output_dir: str = "results",
+    target_layers: List[int] = None,
+    d_model: int = None,
+    num_heads: int = None,
+    epsilon_low: float = 0.001,
+    epsilon_high: float = 0.1,
+    alpha_values: List[float] = None,
+) -> Dict:
+    """
+    Run dual-head tension sweep comparing single vs dual-head PlateauAttention.
+
+    For each (layer, alpha) pair:
+    1. Load raw_input embeddings
+    2. Run single-head PlateauAttention (epsilon_low as baseline)
+    3. Run dual-head DualHeadPlateauAttention (epsilon_low, epsilon_high, alpha)
+    4. Compare metrics
+
+    Returns:
+        Dict with results saved to tension_sweep.json
+    """
+    alpha_values = alpha_values or [0.0, 0.25, 0.5, 0.75, 1.0]
+
+    # Auto-detect target_layers
+    if target_layers is None:
+        softmax_dir = Path(embeddings_dir) / "softmax"
+        if softmax_dir.exists():
+            available = []
+            for f in softmax_dir.glob("layer_*.npy"):
+                try:
+                    layer_num = int(f.stem.split("_")[1])
+                    available.append(layer_num)
+                except (ValueError, IndexError):
+                    pass
+            if available:
+                max_layer = max(available)
+                target_layers = (
+                    TARGET_LAYERS_REAL if max_layer >= 27 else TARGET_LAYERS_MOCK
+                )
+            else:
+                target_layers = TARGET_LAYERS_MOCK
+        else:
+            target_layers = TARGET_LAYERS_MOCK
+
+    # Auto-detect d_model and num_heads from metadata
+    metadata_path = Path(embeddings_dir) / "metadata.json"
+    mode = "mock_numpy"
+    if metadata_path.exists():
+        with open(metadata_path, "r") as f:
+            meta = json.load(f)
+        if d_model is None:
+            d_model = meta.get("d_model", DEFAULT_D_MODEL)
+        if num_heads is None:
+            num_heads = meta.get("num_attention_heads", DEFAULT_NUM_HEADS)
+        mode = meta.get("mode", "mock_numpy")
+        print(f"[Tension] Detected mode: {mode} (d_model={d_model}, heads={num_heads})")
+    else:
+        if d_model is None:
+            d_model = DEFAULT_D_MODEL
+        if num_heads is None:
+            num_heads = DEFAULT_NUM_HEADS
+
+    print(f"[Tension] Starting tension sweep")
+    print(f"[Tension] Target layers: {target_layers}")
+    print(f"[Tension] Epsilon low: {epsilon_low}, Epsilon high: {epsilon_high}")
+    print(f"[Tension] Alpha values: {alpha_values}")
+
+    raw_input = load_raw_input(embeddings_dir)
+    if raw_input is None:
+        print("[Tension] ERROR: raw_input.npy not found.")
+        return {}
+
+    all_results = []
+    total = len(target_layers) * (1 + len(alpha_values))  # single + dual for each alpha
+    pbar = tqdm(total=total, desc="Tension Sweep")
+
+    # Compute baseline (softmax) metrics
+    baseline_ranks = {}
+    print("[Tension] Computing baseline metrics...")
+    for layer_idx in target_layers:
+        baseline_emb = load_embeddings(embeddings_dir, layer_idx)
+        if baseline_emb is not None:
+            metrics = compute_all_metrics(baseline_emb)
+            baseline_ranks[layer_idx] = metrics["effective_rank"]
+            print(f"  Layer {layer_idx}: eff_rank={metrics['effective_rank']:.1f}")
+
+    # Run single-head as baseline for comparison
+    single_head_results = {}
+    print("\n[Tension] Running single-head baseline...")
+    single_attn = PlateauAttentionMechanism(
+        d_model=d_model,
+        num_heads=num_heads,
+        epsilon=epsilon_low,
+        tau_iters=TAU_ITERS,
+    )
+
+    for layer_idx in target_layers:
+        start_time = time.time()
+        try:
+            output, attn_matrix = single_attn.forward(raw_input, return_attention=True)
+            metrics = compute_all_metrics(
+                output,
+                attn_matrix,
+                baseline_effective_rank=baseline_ranks.get(layer_idx),
+            )
+
+            result = {
+                "layer": layer_idx,
+                "mode": "single",
+                "epsilon": epsilon_low,
+                **metrics,
+            }
+            all_results.append(result)
+            single_head_results[layer_idx] = metrics
+
+            elapsed = time.time() - start_time
+            pbar.set_postfix(
+                {
+                    "mode": "single",
+                    "layer": layer_idx,
+                    "eff_rank": f"{metrics['effective_rank']:.1f}",
+                    "time": f"{elapsed:.1f}s",
+                }
+            )
+        except Exception as e:
+            print(f"\n[Tension] ERROR single-head layer={layer_idx}: {e}")
+            all_results.append(
+                {
+                    "layer": layer_idx,
+                    "mode": "single",
+                    "error": str(e),
+                }
+            )
+
+        pbar.update(1)
+
+    # Run dual-head for each alpha
+    print("\n[Tension] Running dual-head experiments...")
+    for alpha in alpha_values:
+        dual_attn = DualHeadPlateauAttention(
+            d_model=d_model,
+            num_heads=num_heads,
+            epsilon_low=epsilon_low,
+            epsilon_high=epsilon_high,
+            alpha=alpha,
+            tau_iters=TAU_ITERS,
+        )
+
+        for layer_idx in target_layers:
+            start_time = time.time()
+            try:
+                output, A_low, A_high = dual_attn.forward(
+                    raw_input, return_attention=True
+                )
+
+                # Compute metrics for output
+                metrics = compute_all_metrics(
+                    output,
+                    A_low,  # Use A_low as primary attention matrix for metrics
+                    baseline_effective_rank=baseline_ranks.get(layer_idx),
+                )
+
+                # Compute entropy for both heads
+                def attention_entropy(A):
+                    """Compute entropy of attention distribution."""
+                    # A: (batch, heads, seq, seq)
+                    eps = 1e-10
+                    A_safe = np.clip(A, eps, 1.0)
+                    ent = -np.sum(
+                        A_safe * np.log(A_safe + eps), axis=-1
+                    )  # (batch, heads, seq)
+                    return float(np.mean(ent))
+
+                entropy_low = attention_entropy(A_low)
+                entropy_high = attention_entropy(A_high)
+
+                result = {
+                    "layer": layer_idx,
+                    "mode": "dual",
+                    "alpha": alpha,
+                    "epsilon_low": epsilon_low,
+                    "epsilon_high": epsilon_high,
+                    **metrics,
+                    "entropy_A_low": entropy_low,
+                    "entropy_A_high": entropy_high,
+                    "entropy_ratio": entropy_high / (entropy_low + 1e-10),
+                }
+                all_results.append(result)
+
+                elapsed = time.time() - start_time
+                pbar.set_postfix(
+                    {
+                        "mode": "dual",
+                        "alpha": f"{alpha:.2f}",
+                        "layer": layer_idx,
+                        "eff_rank": f"{metrics['effective_rank']:.1f}",
+                        "time": f"{elapsed:.1f}s",
+                    }
+                )
+            except Exception as e:
+                print(
+                    f"\n[Tension] ERROR dual-head alpha={alpha}, layer={layer_idx}: {e}"
+                )
+                all_results.append(
+                    {
+                        "layer": layer_idx,
+                        "mode": "dual",
+                        "alpha": alpha,
+                        "error": str(e),
+                    }
+                )
+
+            pbar.update(1)
+
+    pbar.close()
+
+    # Identify best alpha per layer
+    comparison = analyze_tension_results(all_results, target_layers, alpha_values)
+
+    full_results = {
+        "experiment": "Dual-Head Tension Sweep",
+        "date": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "mode": mode,
+        "config": {
+            "target_layers": target_layers,
+            "d_model": d_model,
+            "num_heads": num_heads,
+            "epsilon_low": epsilon_low,
+            "epsilon_high": epsilon_high,
+            "alpha_values": alpha_values,
+            "tau_iters": TAU_ITERS,
+        },
+        "baseline_ranks": baseline_ranks,
+        "comparison": comparison,
+        "results": all_results,
+    }
+
+    output_path = Path(output_dir) / "tension_sweep.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(full_results, f, indent=2)
+
+    print(f"\n[Tension] Results saved to {output_path}")
+    print(f"[Tension] Total results: {len(all_results)}")
+    print(f"[Tension] Comparison summary:")
+    for layer, best_alpha in comparison.get("best_alpha_per_layer", {}).items():
+        print(f"  Layer {layer}: best_alpha={best_alpha}")
+
+    return full_results
+
+
+def analyze_tension_results(
+    results: List[Dict], target_layers: List[int], alpha_values: List[float]
+) -> Dict:
+    """Analyze tension sweep results to find best alpha per layer."""
+    valid_results = [r for r in results if "error" not in r]
+
+    best_alpha_per_layer = {}
+    layers_where_dual_wins = []
+
+    for layer in target_layers:
+        layer_results = [r for r in valid_results if r["layer"] == layer]
+
+        # Find single-head result
+        single_result = next((r for r in layer_results if r["mode"] == "single"), None)
+
+        # Find best dual-head result
+        dual_results = [r for r in layer_results if r["mode"] == "dual"]
+
+        if single_result and dual_results:
+            # Compare by concentration ratio (lower is better for concentration)
+            best_dual = min(
+                dual_results, key=lambda r: r.get("concentration_ratio", 1.0)
+            )
+
+            # Check if dual is better than single
+            if best_dual.get("concentration_ratio", 1.0) < single_result.get(
+                "concentration_ratio", 1.0
+            ):
+                layers_where_dual_wins.append(layer)
+                best_alpha_per_layer[layer] = best_dual["alpha"]
+            else:
+                best_alpha_per_layer[layer] = None  # single-head wins
+
+    return {
+        "layers_where_dual_wins": layers_where_dual_wins,
+        "best_alpha_per_layer": best_alpha_per_layer,
+        "total_layers": len(target_layers),
+        "dual_win_count": len(layers_where_dual_wins),
     }
 
 
