@@ -1,0 +1,50 @@
+{
+  "baseline_ppl": 25.7227,
+  "baseline_time_s": 73.5,
+  "bonus_sweep": [
+    {
+      "bonus": 0.1,
+      "ppl": 25.8461,
+      "delta_ppl": 0.1234,
+      "delta_pct": 0.48,
+      "time_s": 82.2,
+      "layers_swapped": 28
+    },
+    {
+      "bonus": 0.2,
+      "ppl": 26.0678,
+      "delta_ppl": 0.3452,
+      "delta_pct": 1.34,
+      "time_s": 76.5,
+      "layers_swapped": 28
+    },
+    {
+      "bonus": 0.3,
+      "ppl": 26.2846,
+      "delta_ppl": 0.562,
+      "delta_pct": 2.18,
+      "time_s": 77.2,
+      "layers_swapped": 28
+    }
+  ],
+  "previous_results": {
+    "bonus_0.5": {
+      "ppl": 26.6666,
+      "delta_pct": 3.67
+    },
+    "bonus_1.0": {
+      "ppl": 29.49,
+      "delta_pct": 14.66
+    }
+  },
+  "config": {
+    "model": "Qwen/Qwen3-0.6B",
+    "dataset": "wikitext-2-raw-v1",
+    "max_chars": 40000,
+    "eps": 0.005,
+    "num_bubbles": 32,
+    "top_k": 64,
+    "device": "cuda",
+    "dtype": "float16"
+  }
+}

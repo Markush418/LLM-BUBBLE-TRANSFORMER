@@ -427,15 +427,18 @@ def plot_cost_comparison_pareto(results: List[Dict]):
     _save_plot("cost_comparison_pareto")
 
 
-def plot_tension_analysis(results_path: str = "results/tension_sweep.json"):
+def plot_tension_analysis(results_path: str = "results/tension_sweep.json", results: Optional[List[Dict]] = None):
     """Generate tension sweep analysis plots (Plan C)."""
-    results_path = Path(results_path)
-    if not results_path.exists():
-        print(f"[Viz] Tension results not found: {results_path}")
-        return
+    if results is not None:
+        data = {"results": results, "baseline_ranks": {}, "optimal_alpha": {}}
+    else:
+        results_path = Path(results_path)
+        if not results_path.exists():
+            print(f"[Viz] Tension results not found: {results_path}")
+            return
 
-    with open(results_path, "r") as f:
-        data = json.load(f)
+        with open(results_path, "r") as f:
+            data = json.load(f)
 
     results = data.get("results", [])
     baseline_ranks = data.get("baseline_ranks", {})
@@ -726,7 +729,7 @@ def plot_layer_selection(results_path: str = "results/layer_selection.json"):
     print("[Viz] Layer selection plots generated!")
 
 
-def generate_all_plots(results_path: str = "results/epsilon_sweep.json"):
+def generate_all_plots(results_path: str = "results/epsilon_sweep.json", tension_results: Optional[List[Dict]] = None):
     results_path = Path(results_path)
     if not results_path.exists():
         print(f"[Viz] Results file not found: {results_path}")
@@ -748,6 +751,10 @@ def generate_all_plots(results_path: str = "results/epsilon_sweep.json"):
     plot_anisotropy_vs_epsilon(results)
     plot_intrinsic_dim_vs_epsilon(results)
     generate_summary_dashboard(results, sweet_spot)
+
+    if tension_results is not None:
+        plot_tension_analysis(results=tension_results)
+
     print("[Viz] All plots generated!")
 
 

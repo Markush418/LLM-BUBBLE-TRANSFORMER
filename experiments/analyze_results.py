@@ -17,9 +17,11 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
+
+from config import ExperimentConfig
 
 
 def load_results(path: str) -> Dict:
@@ -251,6 +253,105 @@ def generate_report(data: Dict) -> str:
     )
 
     return "\n".join(report)
+
+
+def append_tension_to_report(
+    optimal: Optional[Dict],
+    tension_results: Optional[List[Dict]],
+    config: Optional[ExperimentConfig],
+) -> None:
+    """
+    Append a dual-head tension analysis section to the sweet spot report.
+
+    Creates a section with:
+      - Header: "## Dual-Head Tension Analysis"
+      - Optimal alpha summary table
+      - Full per-layer results table
+      - Recommendation sentence
+
+    Appends to the file (does not overwrite). If the file does not exist,
+    it is created. If ``config`` is None, defaults to
+    ``results/sweet_spot_analysis.md``.
+    """
+    # Resolve report path
+    if config is not None and hasattr(config, "paths"):
+        report_path = Path(config.paths.sweet_spot_report_path)
+    else:
+        report_path = Path("results/sweet_spot_analysis.md")
+
+    # Build markdown lines
+    lines: List[str] = []
+    lines.append("\n---\n")
+    lines.append("## Dual-Head Tension Analysis\n")
+
+    # --- Optimal alpha table ---
+    lines.append("### Optimal Alpha\n")
+    lines.append(
+        "| alpha | score | avg_concentration | avg_effective_rank | avg_tension_balance |"
+    )
+    lines.append(
+        "|-------|-------|-------------------|--------------------|---------------------|"
+    )
+
+    if optimal:
+        alpha = float(optimal.get("alpha", 0.0))
+        score = float(optimal.get("score", 0.0))
+        avg_conc = float(optimal.get("avg_concentration", 0.0))
+        avg_rank = float(optimal.get("avg_effective_rank", 0.0))
+        avg_tension = float(optimal.get("avg_tension_balance", 0.0))
+        lines.append(
+            f"| {alpha:.4f} | {score:.4f} | {avg_conc:.4f} | "
+            f"{avg_rank:.4f} | {avg_tension:.4f} |"
+        )
+    else:
+        lines.append("| N/A | N/A | N/A | N/A | N/A |")
+
+    # --- Full results table ---
+    lines.append("\n### Full Tension Results\n")
+    lines.append(
+        "| alpha | layer | effective_rank | concentration_ratio | tension_balance |"
+    )
+    lines.append(
+        "|-------|-------|----------------|---------------------|-----------------|"
+    )
+
+    dual_results = [
+        r for r in (tension_results or []) if r.get("alpha") is not None
+    ]
+    dual_results.sort(key=lambda r: (r.get("alpha", 0.0), r.get("layer", 0)))
+
+    if dual_results:
+        for r in dual_results:
+            alpha = float(r.get("alpha", 0.0))
+            layer = r.get("layer", "N/A")
+            eff_rank = float(r.get("effective_rank", 0.0))
+            conc = float(r.get("concentration_ratio", 0.0))
+            tension = float(r.get("tension_balance", 0.0))
+            lines.append(
+                f"| {alpha:.4f} | {layer} | {eff_rank:.4f} | "
+                f"{conc:.4f} | {tension:.4f} |"
+            )
+    else:
+        lines.append("| N/A | N/A | N/A | N/A | N/A |")
+
+    # --- Recommendation ---
+    lines.append("")
+    if optimal and optimal.get("alpha") is not None:
+        rec_alpha = float(optimal["alpha"])
+        rec_score = float(optimal.get("score", 0.0))
+        lines.append(
+            f"Recommended alpha: {rec_alpha:.4f} (score: {rec_score:.4f})\n"
+        )
+    else:
+        lines.append("Recommended alpha: N/A (no optimal alpha found)\n")
+
+    # Append to file
+    try:
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(report_path, "a", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+    except OSError as e:
+        print(f"[append_tension_to_report] WARNING: Could not write to {report_path}: {e}")
 
 
 def main():

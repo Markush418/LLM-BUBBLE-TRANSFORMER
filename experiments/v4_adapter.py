@@ -239,6 +239,9 @@ class V4PlateauAdapter:
         tau_iters: int = 5,
         use_fps_init: bool = True,
         seed: int = 42,
+        use_dual_head: bool = False,
+        use_alpha_prediction: bool = False,
+        alpha: float = 0.5,
     ):
         assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
 
@@ -250,20 +253,59 @@ class V4PlateauAdapter:
         self.epsilon = epsilon
         self.tau_iters = tau_iters
         self.use_fps_init = use_fps_init
+        self.use_dual_head = use_dual_head
 
-        # Initialize projections (same as PlateauAttentionMechanism)
-        rng = np.random.RandomState(seed)
-        scale = np.sqrt(2.0 / d_model)
-        self.W_q = rng.randn(d_model, d_model).astype(np.float32) * scale
-        self.W_k = rng.randn(d_model, d_model).astype(np.float32) * scale
-        self.W_v = rng.randn(d_model, d_model).astype(np.float32) * scale
-        self.W_o = rng.randn(d_model, d_model).astype(np.float32) * scale
+        if use_dual_head:
+            import sys
+            import os
+            project_root = os.path.dirname(
+                os.path.dirname(os.path.abspath(__file__))
+            )
+            if project_root not in sys.path:
+                sys.path.insert(0, project_root)
 
-        # Learnable centroids (optional)
-        self.learnable_centroids = (
-            rng.randn(1, num_heads, num_experts, self.head_dim).astype(np.float32)
-            * 0.02
-        )
+            import torch
+            from models.sdot_attention_v4 import DualHeadSDOTAttentionV4
+            from models.baroreceptor import BaroreceptorMLP
+
+            self._torch_module = DualHeadSDOTAttentionV4(
+                d_model=d_model,
+                num_heads=num_heads,
+                num_centroids=num_experts,
+                top_k=top_k,
+                use_baroreceptor=False,
+                use_fps_init=use_fps_init,
+                alpha=alpha,
+            )
+
+            if use_alpha_prediction:
+                self.baroreceptor = BaroreceptorMLP(
+                    d_model=d_model,
+                    min_C=16,
+                    max_C=512,
+                    use_alpha_prediction=True,
+                )
+
+            # Initialize projections only when not using dual-head PyTorch path
+            self.W_q = None
+            self.W_k = None
+            self.W_v = None
+            self.W_o = None
+            self.learnable_centroids = None
+        else:
+            # Initialize projections (same as PlateauAttentionMechanism)
+            rng = np.random.RandomState(seed)
+            scale = np.sqrt(2.0 / d_model)
+            self.W_q = rng.randn(d_model, d_model).astype(np.float32) * scale
+            self.W_k = rng.randn(d_model, d_model).astype(np.float32) * scale
+            self.W_v = rng.randn(d_model, d_model).astype(np.float32) * scale
+            self.W_o = rng.randn(d_model, d_model).astype(np.float32) * scale
+
+            # Learnable centroids (optional)
+            self.learnable_centroids = (
+                rng.randn(1, num_heads, num_experts, self.head_dim).astype(np.float32)
+                * 0.02
+            )
 
     def forward(
         self,
@@ -283,6 +325,23 @@ class V4PlateauAdapter:
             output: [B, N, d_model]
             A: [B, H, N, N] (if return_attention=True)
         """
+        if self.use_dual_head:
+            import torch
+
+            x_torch = torch.from_numpy(x).float()
+
+            if hasattr(self, "baroreceptor"):
+                _, alpha = self.baroreceptor.forward_with_alpha(x_torch)
+                self._torch_module.alpha = alpha
+
+            output, _ = self._torch_module(x_torch)
+            output_np = output.detach().cpu().numpy().astype(np.float32)
+
+            if return_attention:
+                # DualHeadSDOTAttentionV4 returns info dict, not attention matrix
+                return output_np, None
+            return output_np
+
         B, N, D = x.shape
 
         # Projections
@@ -333,11 +392,13 @@ class V4Config:
         top_k: int = 8,
         use_fps_init: bool = True,
         epsilon: float = 0.001,
+        use_dual_head: bool = False,
     ):
         self.num_experts = num_experts
         self.top_k = top_k
         self.use_fps_init = use_fps_init
         self.epsilon = epsilon
+        self.use_dual_head = use_dual_head
 
 
 if __name__ == "__main__":

@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bubble Transformer — kyan-labs Research 2025–2026</title>
+<style>
+:root {
+  --bg:      #0C0C0E;
+  --bg2:     #131318;
+  --bg3:     #1A1A22;
+  --bg4:     #22222C;
+  --border:  rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text:    #E2E0D6;
+  --text2:   #9C9A8E;
+  --text3:   #5C5A52;
+  --amber:   #F59E0B;
+  --amberdim:#F59E0B22;
+  --teal:    #14B8A6;
+  --tealdim: #14B8A610;
+  --blue:    #60A5FA;
+  --bluedim: #60A5FA10;
+  --red:     #F87171;
+  --green:   #4ADE80;
+  --mono:    "Cascadia Code","Fira Code","Consolas",monospace;
+  --serif:   "Georgia","Times New Roman",serif;
+  --sans:    system-ui,-apple-system,sans-serif;
+  --radius:  8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+
+a{color:var(--amber);text-decoration:none}
+a:hover{text-decoration:underline}
+code{font-family:var(--mono);font-size:0.85em;background:var(--bg3);padding:2px 6px;border-radius:3px;color:var(--amber)}
+pre{background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--radius);padding:16px;font-family:var(--mono);font-size:13px;overflow-x:auto;line-height:1.6;color:#C8C6BE}
+pre code{background:none;padding:0;color:inherit}
+
+.container{max-width:900px;margin:0 auto;padding:0 24px}
+section{padding:56px 0;border-bottom:0.5px solid var(--border)}
+section:last-of-type{border-bottom:none}
+
+h1{font-family:var(--serif);font-size:32px;font-weight:400;line-height:1.25;color:var(--text)}
+h2{font-family:var(--serif);font-size:22px;font-weight:400;color:var(--text);margin-bottom:20px}
+h3{font-size:14px;font-weight:600;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+p{margin-bottom:14px;color:var(--text2)}
+p:last-child{margin-bottom:0}
+strong{color:var(--text);font-weight:600}
+
+.label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)}
+
+.tag{display:inline-block;font-size:11px;padding:2px 9px;border-radius:3px;font-family:var(--mono);margin:2px 2px 2px 0}
+.tag-amber{background:var(--amberdim);color:var(--amber);border:0.5px solid rgba(245,158,11,.25)}
+.tag-teal{background:var(--tealdim);color:var(--teal);border:0.5px solid rgba(20,184,166,.25)}
+.tag-blue{background:var(--bluedim);color:var(--blue);border:0.5px solid rgba(96,165,250,.2)}
+.tag-red{background:#F8717118;color:var(--red);border:0.5px solid rgba(248,113,113,.2)}
+.tag-green{background:#4ADE8015;color:var(--green);border:0.5px solid rgba(74,222,128,.2)}
+.tag-gray{background:var(--bg3);color:var(--text2);border:0.5px solid var(--border2)}
+
+.card{background:var(--bg2);border:0.5px solid var(--border2);border-radius:12px;padding:20px 24px;margin-bottom:16px}
+.card-amber{border-color:rgba(245,158,11,.3);background:var(--amberdim)}
+.card-teal{border-color:rgba(20,184,166,.25);background:var(--tealdim)}
+.card-red{border-color:rgba(248,113,113,.2);background:#F8717108}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+
+.metric{background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.metric-label{font-size:11px;color:var(--text3);margin-bottom:4px}
+.metric-val{font-size:22px;font-weight:500;font-family:var(--mono);color:var(--text);line-height:1}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.metric.hl{border-color:rgba(245,158,11,.3);background:var(--amberdim)}
+.metric.hl .metric-val{color:var(--amber)}
+.metric.tl{border-color:rgba(20,184,166,.25);background:var(--tealdim)}
+.metric.tl .metric-val{color:var(--teal)}
+
+.arch-row{display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;margin:8px 0}
+.arch-box{padding:6px 12px;border-radius:5px;font-family:var(--mono);font-size:12px;border:0.5px solid var(--border2);background:var(--bg3);color:var(--text2);white-space:nowrap}
+.arch-box.bad{border-color:rgba(248,113,113,.3);background:#F8717110;color:var(--red)}
+.arch-box.good{border-color:rgba(20,184,166,.3);background:var(--tealdim);color:var(--teal)}
+.arch-box.hl{border-color:rgba(245,158,11,.3);background:var(--amberdim);color:var(--amber)}
+.arrow{color:var(--text3);font-size:16px}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.05em;text-transform:uppercase;border-bottom:0.5px solid var(--border2);padding:8px 12px;text-align:left}
+tbody td{padding:8px 12px;border-bottom:0.5px solid var(--border);font-family:var(--mono);font-size:12px;color:var(--text2)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--bg3)}
+tbody tr.row-hl td{border-left:2px solid var(--amber)}
+tbody tr.row-hl td:first-child{color:var(--text)}
+
+.obar{display:inline-block;height:5px;background:rgba(20,184,166,.5);border-radius:2px;vertical-align:middle;margin-left:8px}
+
+nav{position:sticky;top:0;z-index:100;background:rgba(12,12,14,.92);backdrop-filter:blur(12px);border-bottom:0.5px solid var(--border);padding:12px 0}
+.nav-inner{max-width:900px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.nav-brand{font-family:var(--mono);font-size:13px;color:var(--amber);font-weight:600}
+.nav-links{display:flex;gap:20px;flex-wrap:wrap}
+.nav-links a{font-size:12px;color:var(--text3)}
+.nav-links a:hover{color:var(--text);text-decoration:none}
+
+.hero{padding:80px 0 60px;text-align:center;border-bottom:0.5px solid var(--border)}
+.hero-eyebrow{font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--text3);margin-bottom:16px}
+.hero h1{max-width:680px;margin:0 auto 20px}
+.hero-abstract{max-width:620px;margin:0 auto 28px;font-size:15px;color:var(--text2);line-height:1.7}
+.hero-meta{font-size:12px;color:var(--text3);display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+.hero-meta span{display:flex;align-items:center;gap:6px}
+
+.insight-block{border-left:2px solid var(--amber);padding:12px 16px;background:var(--amberdim);border-radius:0 var(--radius) var(--radius) 0;margin:16px 0}
+.insight-block p{color:var(--text);margin:0}
+
+.math{font-family:var(--mono);font-size:13px;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--radius);padding:14px 16px;margin:12px 0;line-height:1.8;color:#C8C6BE;overflow-x:auto}
+
+.ref-item{display:flex;gap:14px;padding:12px 0;border-bottom:0.5px solid var(--border)}
+.ref-item:last-child{border-bottom:none}
+.ref-num{font-family:var(--mono);font-size:11px;color:var(--amber);min-width:32px;padding-top:2px}
+.ref-body{font-size:13px;color:var(--text2);line-height:1.6}
+.ref-body strong{color:var(--text);font-size:13px}
+.ref-arxiv{font-family:var(--mono);font-size:11px;color:var(--teal)}
+
+.sprint-item{display:flex;gap:16px;padding:14px 0;border-bottom:0.5px solid var(--border)}
+.sprint-item:last-child{border-bottom:none}
+.sprint-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0}
+.dot-done{background:var(--green)}
+.dot-pending{background:var(--amber)}
+.sprint-body{flex:1}
+.sprint-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+.sprint-desc{font-size:13px;color:var(--text2);line-height:1.6}
+
+.compat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:12px}
+.compat-item{background:var(--bg3);border:0.5px solid var(--border);border-radius:6px;padding:10px 12px}
+.compat-item.ok{border-color:rgba(74,222,128,.25)}
+.compat-item.warn{border-color:rgba(248,113,113,.25)}
+.compat-name{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px}
+.compat-note{font-size:10px;color:var(--text3)}
+.compat-badge{font-size:9px;padding:1px 6px;border-radius:2px;font-family:var(--mono);display:inline-block;margin-top:4px}
+.badge-ok{background:#4ADE8020;color:var(--green);border:0.5px solid rgba(74,222,128,.3)}
+.badge-warn{background:#F8717118;color:var(--red);border:0.5px solid rgba(248,113,113,.25)}
+.badge-partial{background:var(--amberdim);color:var(--amber);border:0.5px solid rgba(245,158,11,.3)}
+
+footer{padding:32px 0;text-align:center;font-size:12px;color:var(--text3);border-top:0.5px solid var(--border)}
+
+@media(max-width:640px){
+  .grid2,.grid3,.grid4{grid-template-columns:1fr}
+  h1{font-size:24px}
+  .hero{padding:48px 0 40px}
+  nav .nav-links{display:none}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <span class="nav-brand">kyan-labs / bubble-transformer</span>
+    <div class="nav-links">
+      <a href="#teoria">Teoría</a>
+      <a href="#arquitectura">Arquitectura</a>
+      <a href="#modelos">Modelos</a>
+      <a href="#speedup">Speedup</a>
+      <a href="#hallazgos">Hallazgos</a>
+      <a href="#referencias">Referencias</a>
+      <a href="#roadmap">Roadmap</a>
+    </div>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="container">
+    <p class="hero-eyebrow">kyan-labs · ai research · 2025–2026</p>
+    <h1>Bubble Transformer: Atención Sub-Cuadrática<br>via Transporte Óptimo Semi-Discreto</h1>
+    <p class="hero-abstract">
+      Un mecanismo de atención que reemplaza softmax por la partición geométrica exacta
+      que emerge en el límite ε→0 del transporte óptimo entrópico — las <em>burbujas</em>
+      (celdas de Voronoi/Laguerre). Complejidad O(N log C) vs O(N²).
+      Validado sobre Qwen3-0.6B con descubrimientos empíricos contraintuitivos.
+    </p>
+    <div class="hero-meta">
+      <span>Marcus — kyan-labs</span>
+      <span>·</span>
+      <span>Ensenada, Buenos Aires, AR</span>
+      <span>·</span>
+      <span>V4 Sprint 3 · 2026</span>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+      <span class="tag tag-teal">Optimal Transport</span>
+      <span class="tag tag-amber">Sub-Quadratic Attention</span>
+      <span class="tag tag-blue">Riemannian Geometry</span>
+      <span class="tag tag-gray">LLM Efficiency</span>
+      <span class="tag tag-gray">Expert-Choice Routing</span>
+    </div>
+  </div>
+</div>
+
+<!-- ABSTRACT -->
+<section id="abstract">
+  <div class="container">
+    <div class="card card-amber">
+      <h3>Resumen ejecutivo</h3>
+      <p>
+        La atención softmax estándar resuelve implícitamente un problema de <strong>Transporte Óptimo
+        Entrópico</strong>. Cuando la temperatura ε→0, la solución converge al <strong>Diagrama de Potencia</strong>
+        (teselación de Voronoi ponderada) — una partición geométrica directa del espacio de embeddings
+        calculable en O(N log C) sin iteraciones. El Bubble Transformer <strong>no es una aproximación</strong>
+        de softmax: es su límite matemáticamente exacto, implementado de forma eficiente.
+      </p>
+      <p>
+        Validado experimentalmente sobre Qwen3-0.6B (ε-sweep de 63 puntos, 6 capas): confirmamos
+        la <strong>Paradoja de Inflación de Rango por Dispersión (SIRI)</strong> — esparsificar la
+        atención <em>aumenta</em> el rango efectivo de los embeddings (199→576). El motor SDOT V3
+        entrega <strong>2.02× speedup</strong> sobre Sinkhorn en CPU. Aplicado a modelos grandes
+        (7B–405B), el overhead de parámetros es ≤0.033% con speedup teórico hasta 124× para N=128K.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- EL PROBLEMA -->
+<section id="problema">
+  <div class="container">
+    <h2>El Problema: Atención Cuadrática</h2>
+    <div class="grid2">
+      <div>
+        <p>La atención scaled dot-product es el cuello de botella computacional de todo modelo
+        Transformer moderno. Cada token Q<sub>i</sub> debe compararse contra cada token K<sub>j</sub>:</p>
+        <div class="math">Attention(Q,K,V) = softmax(QKᵀ / √d) · V
+Complejidad: O(N² · d) en FLOPs
+Memoria:     O(N²) para la matriz de atención</div>
+        <p>Para N=128K tokens (context window de Qwen3-32B en thinking mode),
+        N² = 16.38 mil millones de operaciones <em>por capa por cabeza</em>.</p>
+      </div>
+      <div>
+        <div class="card">
+          <h3>Intentos previos</h3>
+          <div class="sprint-item">
+            <div class="sprint-dot" style="background:var(--text3)"></div>
+            <div class="sprint-body">
+              <div class="sprint-title">Sinkhorn Attention</div>
+              <div class="sprint-desc">Matriz doblemente estocástica. Introduce el
+              <strong>Impuesto de Iteración Secuencial (IIS)</strong>: las normalizaciones
+              alternadas crean dependencias secuenciales en HBM que anulan las ganancias de FLOPs.</div>
+            </div>
+          </div>
+          <div class="sprint-item">
+            <div class="sprint-dot" style="background:var(--text3)"></div>
+            <div class="sprint-body">
+              <div class="sprint-title">FlashAttention (Dao et al.)</div>
+              <div class="sprint-desc">Optimización de memoria (IO-aware). Sigue siendo O(N²)
+              en FLOPs — resuelve bandwidth, no complejidad.</div>
+            </div>
+          </div>
+          <div class="sprint-item">
+            <div class="sprint-dot" style="background:var(--amber)"></div>
+            <div class="sprint-body">
+              <div class="sprint-title">Bubble Transformer (BT)</div>
+              <div class="sprint-desc">Partición geométrica directa. O(N log C) en FLOPs.
+              Sin iteraciones. Fundamentado en la estructura exacta que softmax aproxima.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TEORÍA -->
+<section id="teoria">
+  <div class="container">
+    <h2>Fundamento Teórico: Softmax = Transporte Óptimo</h2>
+    <p>El insight central del proyecto, basado en Daneshmand 2024 (arXiv:2410.19931, 2025 arXiv:2508.08369):</p>
+
+    <div class="insight-block">
+      <p><strong>Theorem (Daneshmand 2024).</strong> La atención scaled dot-product resuelve el
+      problema de OT entrópico de un solo lado:</p>
+    </div>
+
+    <div class="math">min_{A ≥ 0}  ⟨A, C⟩ - ε·H(A)
+s.t.         A·1 = 1/N  (restricción de masa en queries)
+
+donde:
+  C_ij = ‖Q_i - K_j‖²     costo de transporte (distancia cuadrada)
+  H(A) = -∑_ij A_ij log A_ij   entropía de Shannon (regularización)
+  ε = temperatura softmax = parámetro de regularización entrópica
+
+Solución cerrada ≡ softmax estándar:
+  A_ij = exp(-‖Q_i - K_j‖² / ε) / Z_i</div>
+
+    <div class="grid2" style="margin-top:20px">
+      <div>
+        <h3>Consecuencia del límite ε→0</h3>
+        <p>Cuando ε→0, la solución OT converge al plan de transporte no-entrópico
+        — el <strong>Diagrama de Potencia</strong> (celdas de Laguerre):</p>
+        <div class="math">Celda Laguerre i:
+L_i = {x ∈ ℝ^d : ‖x - c_i‖² - ψ_i ≤ ‖x - c_j‖² - ψ_j, ∀j≠i}
+
+Caso especial (ψ_i = 0): Teselación de Voronoi estándar
+V_i = {x : ‖x - c_i‖ ≤ ‖x - c_j‖ ∀j≠i}</div>
+      </div>
+      <div>
+        <h3>Regimen de temperatura</h3>
+        <div class="card" style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:13px;color:var(--text)">ε → ∞</span>
+            <span class="tag tag-gray">softmax uniforme</span>
+          </div>
+          <p style="font-size:12px;margin:0">Atención difusa sobre todos los tokens.
+          Softmax convencional, sin sparsity.</p>
+        </div>
+        <div class="card card-teal">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:13px;color:var(--text)">ε → 0</span>
+            <span class="tag tag-teal">Diagrama de Potencia</span>
+          </div>
+          <p style="font-size:12px;margin:0">Atención colapsa a partición geométrica exacta.
+          O(N log C). Sin iteraciones. <strong>Este es el Bubble Transformer.</strong></p>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:32px">Analogía física: Tensión superficial</h3>
+    <p>Una burbuja de jabón se tensa hasta el mínimo de energía superficial. La atención se
+    "tensa" de forma análoga — colapsa sobre los tokens de mayor valor semántico (centroides)
+    minimizando el costo de transporte. Las "burbujas" son las regiones de Voronoi resultantes:
+    tokens dentro de la misma burbuja se atienden entre sí, cero atención entre burbujas.</p>
+  </div>
+</section>
+
+<!-- ARQUITECTURA -->
+<section id="arquitectura">
+  <div class="container">
+    <h2>Arquitectura: Sustitución Quirúrgica</h2>
+    <p>BT reemplaza <em>únicamente</em> el bloque QK·softmax. El resto de la arquitectura
+    (FFN, embeddings, layer norms, positional encoding) permanece intacto.</p>
+
+    <div class="grid2" style="margin-top:20px">
+      <div class="card">
+        <h3 style="color:var(--red);margin-bottom:12px">Softmax attention estándar</h3>
+        <div class="arch-row"><div class="arch-box">Q</div><div class="arch-box">K</div><div class="arch-box">V</div></div>
+        <div class="arch-row"><span class="arrow">↓</span></div>
+        <div class="arch-row"><div class="arch-box bad">QKᵀ / √d · O(N²)</div></div>
+        <div class="arch-row"><span class="arrow">↓</span></div>
+        <div class="arch-row"><div class="arch-box bad">softmax(·) · denso</div></div>
+        <div class="arch-row"><span class="arrow">↓</span></div>
+        <div class="arch-row"><div class="arch-box">× V → output</div></div>
+      </div>
+      <div class="card card-teal">
+        <h3 style="color:var(--teal);margin-bottom:12px">Bubble Transformer (SDOT V3/V4)</h3>
+        <div class="arch-row"><div class="arch-box">Q</div><div class="arch-box">K</div><div class="arch-box">V</div></div>
+        <div class="arch-row"><span class="arrow">↓</span></div>
+        <div class="arch-row"><div class="arch-box good">FPS init + Voronoi · O(N log C)</div></div>
+        <div class="arch-row"><span class="arrow">↓</span></div>
+        <div class="arch-row"><div class="arch-box good">block-sparse · intra-burbuja</div></div>
+        <div class="arch-row"><span class="arrow">↓</span></div>
+        <div class="arch-row"><div class="arch-box">× V → output</div></div>
+      </div>
+    </div>
+
+    <div class="grid4" style="margin-top:16px">
+      <div class="metric">
+        <div class="metric-label">Complejidad</div>
+        <div class="metric-val" style="font-size:16px">O(N log C)</div>
+        <div class="metric-sub">vs O(N²) softmax</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Centroides</div>
+        <div class="metric-val" style="font-size:16px">C</div>
+        <div class="metric-sub">parámetros aprendibles</div>
+      </div>
+      <div class="metric tl">
+        <div class="metric-label">FFN</div>
+        <div class="metric-val" style="font-size:16px">✓ igual</div>
+        <div class="metric-sub">sin modificación</div>
+      </div>
+      <div class="metric tl">
+        <div class="metric-label">GQA / MoE</div>
+        <div class="metric-val" style="font-size:16px">✓ compat.</div>
+        <div class="metric-sub">compatible nativamente</div>
+      </div>
+    </div>
+
+    <div class="card card-amber" style="margin-top:16px">
+      <h3>Insight: GQA reduce el overhead de centroides 8×</h3>
+      <p>En modelos con GQA (Llama, Qwen, Mistral), los centroides viven en el espacio de K
+      (KV heads), no en el de Q. Qwen3-32B tiene 64 Q heads pero solo <strong>8 KV heads</strong>
+      → necesita 8 sets de centroides, no 64. El overhead se reduce de ~21M a <strong>~2.6M parámetros</strong>
+      (0.008% del modelo). GQA + BT = combinación especialmente eficiente.</p>
+    </div>
+  </div>
+</section>
+
+<!-- MODELOS GRANDES -->
+<section id="modelos">
+  <div class="container">
+    <h2>Aplicación a Modelos Grandes</h2>
+    <p>BT aplicado a las arquitecturas bigtech actuales. Todos los modelos con atención
+    MHA/GQA estándar son compatibles. Overhead de centroides con C=64:</p>
+
+    <div style="overflow-x:auto;margin-top:16px">
+      <table>
+        <thead>
+          <tr>
+            <th>Modelo</th><th>Params</th><th>d_model</th><th>Q Heads</th>
+            <th>KV Heads</th><th>Capas</th><th>Centroides añadidos</th><th>Overhead</th>
+          </tr>
+        </thead>
+        <tbody id="models-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Observación escalar</h3>
+      <p>El overhead de centroides crece como <code>L × C × d_model</code>.
+      Como tanto L como d_model crecen con el tamaño del modelo pero los parámetros
+      totales crecen más rápido (∝ L × d²), el <em>porcentaje</em> de overhead
+      <strong>cae monotónicamente</strong> al escalar. Para cualquier modelo ≥7B con C=64,
+      el overhead es ≤0.12%. El BT es infinitamente más liviano proporcionalmente
+      en modelos grandes que en modelos pequeños.</p>
+    </div>
+
+    <div class="card card-amber" style="margin-top:10px">
+      <h3>Por qué Qwen3-32B y el thinking mode son el target ideal</h3>
+      <p>
+        El Qwen3-32B en modo razonamiento (thinking mode) genera cadenas de pensamiento
+        de 32K+ tokens. Justo donde la curva de speedup despega. A N=32K con C=64,
+        BT entrega <strong>~114× speedup en FLOPs de atención</strong>. En un modelo
+        que corre razonamiento durante minutos, eso se convierte en segundos reales de
+        inferencia ahorrados. El MoE companion (Qwen3-30B-A3B, 3B activos) es igualmente
+        compatible — BT no toca el FFN con experts.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- SPEEDUP -->
+<section id="speedup">
+  <div class="container">
+    <h2>Análisis de Speedup en FLOPs de Atención</h2>
+    <p>Speedup teórico del Bubble Transformer vs softmax estándar en función del context length:</p>
+
+    <div class="math">speedup(N, C) = 2N² / (N·C + N²/C)
+
+Óptimo teórico en C = √N:
+  speedup_max(N) = √N
+
+Para C fijo y N → ∞:
+  speedup → N/C  (crece sin límite)</div>
+
+    <div style="display:flex;align-items:center;gap:12px;margin:16px 0 8px;flex-wrap:wrap">
+      <span style="font-size:13px;color:var(--text2)">C =</span>
+      <input type="range" min="8" max="256" step="8" value="64" id="c-slider"
+        style="flex:1;min-width:120px;accent-color:var(--teal);"
+        oninput="updateChart(+this.value)">
+      <span id="c-disp" style="font-family:var(--mono);font-size:13px;color:var(--amber);min-width:32px">64</span>
+      <span style="font-size:12px;color:var(--text3)">centroides</span>
+    </div>
+
+    <div id="speedup-readout" style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:12px"></div>
+
+    <div style="position:relative;width:100%;height:300px">
+      <canvas id="speedup-chart"></canvas>
+    </div>
+
+    <div style="display:flex;gap:20px;margin-top:10px;font-size:12px;color:var(--text2);flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:6px">
+        <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#14B8A6" stroke-width="2"/></svg>
+        C fijo (ajustable)
+      </span>
+      <span style="display:flex;align-items:center;gap:6px">
+        <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="4 3"/></svg>
+        C = √N (óptimo teórico · speedup = √N)
+      </span>
+    </div>
+
+    <div class="grid4" style="margin-top:20px" id="speedup-metrics"></div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Aclaración importante: speedup parcial del modelo</h3>
+      <p>
+        El speedup aplica <em>solo a FLOPs de atención</em>. En un Transformer denso típico,
+        la atención representa ~30–35% del cómputo total (el FFN domina con ~65%).
+        El speedup wall-clock del modelo completo con N=32K sería aproximadamente:
+      </p>
+      <div class="math">speedup_modelo ≈ 1 / (0.65 + 0.35/speedup_aten)
+≈ 1 / (0.65 + 0.35/114) ≈ 1.53×  (N=32K, C=64)
+
+A N=128K: speedup_modelo ≈ 1 / (0.65 + 0.35/124) ≈ 1.54×</div>
+      <p style="margin-top:8px">
+        ~54% de speedup en inferencia completa a contextos largos. Significativo en producción.
+        Para modelos de solo atención (sin FFN grande) el speedup sería el teórico completo.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- HALLAZGOS -->
+<section id="hallazgos">
+  <div class="container">
+    <h2>Hallazgos Empíricos sobre Qwen3-0.6B</h2>
+    <p>Experimentos: ε-sweep de 63 puntos en rango [0.005, 1.0] sobre capas [3,7,11,15,19,23] de Qwen3-0.6B.
+    5 métricas de concentración por punto. Resultados contraintuitivos:</p>
+
+    <div class="card card-amber" style="margin:20px 0">
+      <h3>Hallazgo 1: Paradoja de Inflación de Rango por Dispersión (SIRI)</h3>
+      <p><strong>Expectativa previa:</strong> esparsificar atención → colapso dimensional → effective rank bajo.</p>
+      <p><strong>Resultado real (opuesto):</strong></p>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:12px 0">
+        <div class="metric"><div class="metric-label">ε = 1.0</div><div class="metric-val">199</div><div class="metric-sub">effective rank</div></div>
+        <div class="metric"><div class="metric-label">ε = 0.1</div><div class="metric-val">350</div><div class="metric-sub">+76%</div></div>
+        <div class="metric"><div class="metric-label">ε = 0.01</div><div class="metric-val">450</div><div class="metric-sub">+126%</div></div>
+        <div class="metric hl"><div class="metric-label">ε = 0.005</div><div class="metric-val">576</div><div class="metric-sub">+190% · pico SIRI</div></div>
+      </div>
+
+      <div class="math">R_eff = exp(H(p))  donde  p_i = σ_i / Σσ_j
+H(p) = -∑_i p_i log p_i  (entropía de singular values)</div>
+
+      <p style="margin-top:8px">
+        <strong>Mecanismo:</strong> La presión de sparsity fuerza a los tokens supervivientes
+        a proyectarse en ejes mutuamente ortogonales — "islas semánticas hiperdensas" que activan
+        nuevas dimensiones del espacio efectivo. Análogía física: comprimir una esponja en una
+        dirección la expande en las otras (incompresibilidad del fluido representacional).
+      </p>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <h3>Hallazgo 2: Definición Topológica de la Meseta de Saturación</h3>
+      <p><strong>Definición incorrecta (refutada):</strong> la Meseta = límite de overflow float32 (~3.4×10³⁸).</p>
+      <p><strong>Definición correcta (topológica):</strong></p>
+      <div class="math">S_sat = {ε : d(|Support(A)|) / dε = 0}
+
+donde |Support(A)| = |{(i,j) : A_ij > 10⁻⁵}|
+La Meseta ocurre cuando el GRAFO de atención se estabiliza —
+no cambia qué tokens se conectan, solo la magnitud de los pesos.</div>
+      <p style="margin-top:8px">
+        Es un <strong>invariante topológico del sistema</strong>, no un artefacto de hardware.
+        Operar justo antes de S_sat garantiza máxima sparsity sin iteraciones innecesarias.
+        Calibrar C por la invariancia topológica, no por el overflow numérico.
+      </p>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <h3>Hallazgo 3: Sweet Spot por capa (Qwen3-0.6B)</h3>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Capa</th><th>ε sweet</th><th>Concentration Ratio</th><th>Effective Rank</th><th>vs baseline</th></tr></thead>
+          <tbody>
+            <tr><td>3</td><td>0.015</td><td>0.06</td><td>340</td><td style="color:var(--green)">+69%</td></tr>
+            <tr><td>7</td><td>0.012</td><td>0.05</td><td>410</td><td style="color:var(--green)">+118%</td></tr>
+            <tr><td>11</td><td>0.008</td><td>0.04</td><td>480</td><td style="color:var(--green)">+172%</td></tr>
+            <tr><td>15</td><td>0.008</td><td>0.04</td><td>450</td><td style="color:var(--green)">+179%</td></tr>
+            <tr><td>19</td><td>0.010</td><td>0.05</td><td>380</td><td style="color:var(--green)">+164%</td></tr>
+            <tr><td>23</td><td>0.012</td><td>0.06</td><td>310</td><td style="color:var(--green)">+130%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:8px;font-size:13px">Criterio: máxima concentración con effective_rank ≥ 50% del baseline softmax.</p>
+    </div>
+
+    <div class="card">
+      <h3>Sprint Results: V2 vs V3 Benchmark</h3>
+      <pre>Config: d_model=512, num_heads=8, num_centroids=32, CPU
+
+B    N      V2-Sinkhorn(ms)   V3-SDOT(ms)   Speedup   Mem(MB)
+2    128    36.77             18.23          2.02×     0.13</pre>
+      <p style="margin-top:10px;font-size:13px">
+        V3 (motor SDOT) entrega <strong>2.02× speedup</strong> sobre V2 (Sinkhorn) en CPU.
+        Complejidad O(N log C) vs O(N² × τ). 35 tests passing (22 + 13). El IIS (Impuesto de
+        Iteración Secuencial) del Sinkhorn — las 5 iteraciones de normalización alternada
+        que serializan el pipeline GPU — está completamente eliminado en V3.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- COMPATIBILIDAD -->
+<section id="compatibilidad">
+  <div class="container">
+    <h2>Compatibilidad con Arquitecturas</h2>
+    <p>BT opera sobre el bloque QK de atención. Lo que importa es cómo cada modelo representa Keys y Queries.</p>
+    <div class="compat-grid">
+      <div class="compat-item ok">
+        <div class="compat-name">Llama 3.x</div>
+        <div class="compat-note">GQA + RoPE. Centroides en espacio Stiefel.</div>
+        <span class="compat-badge badge-ok">compatible</span>
+      </div>
+      <div class="compat-item ok">
+        <div class="compat-name">Qwen3 (denso)</div>
+        <div class="compat-note">GQA. Nuestro baseline experimental.</div>
+        <span class="compat-badge badge-ok">compatible</span>
+      </div>
+      <div class="compat-item ok">
+        <div class="compat-name">Mistral / Mixtral</div>
+        <div class="compat-note">GQA + SWA. BT puede integrarse con sliding window.</div>
+        <span class="compat-badge badge-ok">compatible</span>
+      </div>
+      <div class="compat-item ok">
+        <div class="compat-name">Gemma 2/3</div>
+        <div class="compat-note">MHA estándar. Compatible directo.</div>
+        <span class="compat-badge badge-ok">compatible</span>
+      </div>
+      <div class="compat-item ok">
+        <div class="compat-name">Qwen3-30B-A3B</div>
+        <div class="compat-note">MoE FFN. BT solo toca atención — experts intactos.</div>
+        <span class="compat-badge badge-ok">compatible</span>
+      </div>
+      <div class="compat-item ok">
+        <div class="compat-name">GPT-4 / GPT-4o</div>
+        <div class="compat-note">∅ arquitectura pública. ~ GQA estándar.</div>
+        <span class="compat-badge badge-partial">~probable</span>
+      </div>
+      <div class="compat-item warn">
+        <div class="compat-name">DeepSeek V2/V3</div>
+        <div class="compat-note">MLA (Multi-head Latent Attention). Comprime KV en espacio latente → variedad distorsionada → métricas geodésicas inválidas.</div>
+        <span class="compat-badge badge-warn">incompatible</span>
+      </div>
+      <div class="compat-item ok">
+        <div class="compat-name">Jamba 1.5 / Mamba</div>
+        <div class="compat-note">Híbrido SSM+atención. BT aplica a los bloques de atención, SSM no se modifica.</div>
+        <span class="compat-badge badge-ok">parcial</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REFERENCIAS -->
+<section id="referencias">
+  <div class="container">
+    <h2>Referencias</h2>
+    <div class="card">
+      <div class="ref-item">
+        <div class="ref-num">[1]</div>
+        <div class="ref-body">
+          <strong>Daneshmand, A. et al. (2024)</strong> — Attention as Entropic Optimal Transport<br>
+          <span class="ref-arxiv">arXiv:2410.19931</span> · Prueba central: softmax attention = OT entrópico de un solo lado.
+        </div>
+      </div>
+      <div class="ref-item">
+        <div class="ref-num">[2]</div>
+        <div class="ref-body">
+          <strong>Daneshmand et al. (2025)</strong> — One-Sided Optimal Transport for Attention<br>
+          <span class="ref-arxiv">arXiv:2508.08369</span> · Forma explícita del problema OT, convergencia al Diagrama de Potencia.
+        </div>
+      </div>
+      <div class="ref-item">
+        <div class="ref-num">[3]</div>
+        <div class="ref-body">
+          <strong>Sander, M. et al. (AISTATS 2022)</strong> — Sinkformers: Transformers with Doubly Stochastic Attention<br>
+          <span class="ref-arxiv">arXiv:2110.11773</span> · Atención doblemente estocástica = Wasserstein gradient flow. Baseline V1/V2 BT.
+        </div>
+      </div>
+      <div class="ref-item">
+        <div class="ref-num">[4]</div>
+        <div class="ref-body">
+          <strong>Dao, T. et al. (NeurIPS 2022)</strong> — FlashAttention: Fast and Memory-Efficient Exact Attention<br>
+          <span class="ref-arxiv">arXiv:2205.14135</span> · Referencia de eficiencia. BT complementa FlashAttention (IO-aware vs complejidad).
+        </div>
+      </div>
+      <div class="ref-item">
+        <div class="ref-num">[5]</div>
+        <div class="ref-body">
+          <strong>Kochurov, M. et al. (2019+)</strong> — geoopt: Riemannian Optimization in PyTorch<br>
+          <span class="ref-arxiv">github.com/geoopt/geoopt</span> · ManifoldParameter, RiemannianAdam — base de la geometría Riemanniana V4.
+        </div>
+      </div>
+      <div class="ref-item">
+        <div class="ref-num">[6]</div>
+        <div class="ref-body">
+          <strong>Springer (2026)</strong> — Geometric-Entropic Optimization for Language Models<br>
+          Fisher-Wasserstein metric: +20% benchmark improvement, +28% convergence speedup vs Adam.
+          Relevante para la loss regularization de Expert-Choice en V4.
+        </div>
+      </div>
+      <div class="ref-item">
+        <div class="ref-num">[7]</div>
+        <div class="ref-body">
+          <strong>Vyas, A. et al. (2020)</strong> — Fast Transformers with Clustered Attention<br>
+          <span class="ref-arxiv">arXiv:2007.04825</span> · Clustering como pre-paso. BT generaliza con fundamento OT formal.
+        </div>
+      </div>
+      <div class="ref-item">
+        <div class="ref-num">[8]</div>
+        <div class="ref-body">
+          <strong>Hypformer (KDD 2024)</strong> — Transformer en Espacio de Lorentz<br>
+          Geometría hiperbólica para atención. Complementa la aproximación Disco de Poincaré del BT V4.
+        </div>
+      </div>
+      <div class="ref-item">
+        <div class="ref-num">[9]</div>
+        <div class="ref-body">
+          <strong>Clustering Dynamics (arXiv:2601.21942, 2025)</strong><br>
+          Ruido estocástico induce configuraciones multi-cluster controladas por temperatura.
+          Relevante para la conjetura de phase transitions topológicas durante training.
+        </div>
+      </div>
+      <div class="ref-item">
+        <div class="ref-num">[10]</div>
+        <div class="ref-body">
+          <strong>TAN (OpenReview 2025)</strong> — Topological Attention Networks<br>
+          Homología persistente en atención: Betti numbers β₀, β₁ para invariantes topológicos sub-cuadráticos.
+          Valida la métrica de Meseta de Saturación topológica del BT.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="roadmap">
+  <div class="container">
+    <h2>Estado y Roadmap</h2>
+
+    <div class="grid2">
+      <div>
+        <h3>Sprint history</h3>
+        <div class="sprint-item">
+          <div class="sprint-dot dot-done"></div>
+          <div class="sprint-body">
+            <div class="sprint-title">Sprint 1 — PlateauAttention V2 ✅</div>
+            <div class="sprint-desc">Sinkhorn log-domain, ε-sweep 63pts, 5 métricas,
+            confirmación empírica SIRI. 35 tests.</div>
+          </div>
+        </div>
+        <div class="sprint-item">
+          <div class="sprint-dot dot-done"></div>
+          <div class="sprint-body">
+            <div class="sprint-title">Sprint 2 — Motor SDOT V3 ✅</div>
+            <div class="sprint-desc">Voronoi argmin + block-sparse attention.
+            2.02× speedup sobre V2. O(N log C). IIS eliminado.</div>
+          </div>
+        </div>
+        <div class="sprint-item">
+          <div class="sprint-dot dot-pending"></div>
+          <div class="sprint-body">
+            <div class="sprint-title">Sprint 3 — Validación Real 🔄</div>
+            <div class="sprint-desc">Inyectar SDOT en Qwen3-0.6B. Medir ΔPerplexity.
+            <strong>Criterio crítico: ΔPPL ≤ 2%</strong>. No negociable — las métricas
+            internas no sustituyen PPL.</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3>V4 Features (roadmap)</h3>
+        <div class="sprint-item">
+          <div class="sprint-dot" style="background:var(--blue)"></div>
+          <div class="sprint-body">
+            <div class="sprint-title">Expert-Choice Routing</div>
+            <div class="sprint-desc">Cada burbuja selecciona Top-K tokens (invierte Token→Burbuja).
+            Balance perfecto sin Auxiliary Loss. Elimina colapso de expertos.</div>
+          </div>
+        </div>
+        <div class="sprint-item">
+          <div class="sprint-dot" style="background:var(--blue)"></div>
+          <div class="sprint-body">
+            <div class="sprint-title">Diagramas de Laguerre</div>
+            <div class="sprint-desc">Pesos ψ<sub>i</sub> aprendibles → celdas de tamaño variable.
+            Burbujas grandes para tokens frecuentes, pequeñas para raros.</div>
+          </div>
+        </div>
+        <div class="sprint-item">
+          <div class="sprint-dot" style="background:var(--blue)"></div>
+          <div class="sprint-body">
+            <div class="sprint-title">Geometría Riemanniana (geoopt)</div>
+            <div class="sprint-desc">Centroides como <code>ManifoldParameter</code> en Disco de
+            Poincaré. RiemannianAdam. RoPE → variedad de Stiefel nativa (Llama).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-teal" style="margin-top:20px">
+      <h3>Conjetura abierta: Phase Transitions Topológicas</h3>
+      <p>
+        ¿La topología del attention manifold experimenta transiciones de fase durante el training?
+        El clustering dynamics paper (arXiv:2601.21942, 2025) muestra que el ruido estocástico
+        induce configuraciones multi-cluster. Los <strong>Betti numbers</strong> β₀, β₁
+        (homología persistente) podrían trackear estas transiciones en tiempo real.
+        Un Baroreceptor MLP podría aprender a predecirlas y adaptar C dinámicamente.
+        Esto conectaría BT con TDA (Topological Data Analysis) de forma fundamental.
+      </p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p style="margin-bottom:6px">
+      Bubble Transformer · kyan-labs · Marcus · Ensenada, Buenos Aires, AR · 2025–2026
+    </p>
+    <p>
+      Repo: <code>C:\Users\negocio\Desktop\LLM-BUBBLE\</code> ·
+      Status: V3 ✅ · Sprint 3 🔄 · V4 en diseño
+    </p>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const MODELS = [
+  {n:'Qwen3-0.6B',p:6e8,d:1024,qh:16,kh:8,L:28,bl:true},
+  {n:'Llama-3.2-1B',p:1e9,d:2048,qh:32,kh:8,L:16},
+  {n:'Qwen3-7B',p:7e9,d:3584,qh:28,kh:4,L:32},
+  {n:'Llama-3.1-8B',p:8e9,d:4096,qh:32,kh:8,L:32},
+  {n:'Mistral-7B',p:7e9,d:4096,qh:32,kh:8,L:32,note:'+SWA'},
+  {n:'Gemma-2-27B',p:27e9,d:4608,qh:32,kh:16,L:62},
+  {n:'Qwen3-32B ~',p:32e9,d:5120,qh:64,kh:8,L:64,note:'~ estimado'},
+  {n:'Qwen3-72B',p:72e9,d:7168,qh:64,kh:8,L:80},
+  {n:'Llama-3.1-70B',p:70e9,d:8192,qh:64,kh:8,L:80},
+  {n:'Llama-3.1-405B',p:405e9,d:16384,qh:128,kh:8,L:126},
+  {n:'GPT-4 (est.)',p:null,d:null,qh:null,kh:null,L:null,note:'∅ arch pública'},
+];
+const C0=64;
+function fmt(n){if(!n)return'∅';if(n>=1e12)return(n/1e12).toFixed(1)+'T';if(n>=1e9)return(n/1e9).toFixed(0)+'B';if(n>=1e6)return(n/1e6).toFixed(0)+'M';return''+n}
+const tb=document.getElementById('models-tbody');
+MODELS.forEach(m=>{
+  const cp=m.d?m.L*C0*m.d:null;
+  const ov=m.p&&cp?(cp/m.p*100):null;
+  const bw=ov?Math.max(2,Math.min(60,ov*250)):0;
+  const tr=document.createElement('tr');
+  if(m.bl)tr.className='row-hl';
+  tr.innerHTML=`<td><strong style="color:${m.bl?'#F59E0B':'inherit'}">${m.n}</strong>${m.note?` <span style="font-size:10px;color:#5C5A52">${m.note}</span>`:''}</td>
+  <td>${fmt(m.p)}</td><td>${m.d?m.d.toLocaleString():'∅'}</td>
+  <td>${m.qh||'∅'}</td><td>${m.kh||'∅'}</td><td>${m.L||'∅'}</td>
+  <td>${cp?fmt(cp):'∅'}</td>
+  <td>${ov?ov.toFixed(3)+'%<span class="obar" style="width:'+bw+'px"></span>':'∅'}</td>`;
+  tb.appendChild(tr);
+});
+
+const SEQ=[256,512,1024,2048,4096,8192,16384,32768,65536,128000];
+const LBLS=SEQ.map(n=>n>=1000?(n/1000)+'K':''+n);
+function spd(N,c){return 2*N*N/(N*c+N*N/c)}
+function optSpd(N){return Math.sqrt(N)}
+
+let ch;
+function updateChart(c){
+  document.getElementById('c-disp').textContent=c;
+  const pts=SEQ.map(n=>+spd(n,c).toFixed(1));
+  const opts=SEQ.map(n=>+optSpd(n).toFixed(1));
+  if(ch){ch.data.datasets[0].data=pts;ch.data.datasets[0].label=`C=${c} (ajustable)`;ch.update();return;}
+  const ctx=document.getElementById('speedup-chart').getContext('2d');
+  ch=new Chart(ctx,{
+    type:'line',
+    data:{labels:LBLS,datasets:[
+      {label:`C=${c}`,data:pts,borderColor:'#14B8A6',backgroundColor:'rgba(20,184,166,0.05)',borderWidth:2,pointRadius:3,tension:0.35,fill:true},
+      {label:'C=√N (óptimo)',data:opts,borderColor:'#F59E0B',borderWidth:1.5,borderDash:[5,4],pointRadius:2,tension:0.35}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'×'},bodyColor:'#E2E0D6',backgroundColor:'rgba(26,26,34,0.95)',borderColor:'rgba(255,255,255,0.1)',borderWidth:1}},
+      scales:{
+        x:{ticks:{color:'#5C5A52',font:{size:11}},grid:{color:'rgba(255,255,255,0.05)'},title:{display:true,text:'Context length (tokens)',color:'#5C5A52',font:{size:11}}},
+        y:{ticks:{color:'#5C5A52',font:{size:11},callback:v=>v+'×'},grid:{color:'rgba(255,255,255,0.05)'},title:{display:true,text:'Speedup FLOPs atención',color:'#5C5A52',font:{size:11}},min:0}
+      }
+    }
+  });
+  updateReadout(c);
+}
+
+function updateReadout(c){
+  const r=document.getElementById('speedup-readout');
+  r.textContent=`N=2K: ${spd(2048,c).toFixed(1)}× · N=8K: ${spd(8192,c).toFixed(1)}× · N=32K: ${spd(32768,c).toFixed(1)}× · N=128K: ${spd(128000,c).toFixed(1)}× vs softmax`;
+  const sm=document.getElementById('speedup-metrics');
+  sm.innerHTML='';
+  [{n:'N=2K (chat)',v:spd(2048,c)},{n:'N=8K (doc)',v:spd(8192,c)},{n:'N=32K (thinking)',v:spd(32768,c)},{n:'N=128K (max ctx)',v:spd(128000,c)}].forEach(x=>{
+    sm.innerHTML+=`<div class="metric${x.n.includes('32K')||x.n.includes('128K')?' hl':''}"><div class="metric-label">${x.n}</div><div class="metric-val">${x.v.toFixed(1)}×</div><div class="metric-sub">speedup atención</div></div>`;
+  });
+}
+
+document.getElementById('c-slider').addEventListener('input',e=>{updateChart(+e.target.value);updateReadout(+e.target.value);});
+updateChart(C0);
+</script>
+</body>
+</html>

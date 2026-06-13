@@ -10,6 +10,7 @@ Architecture: d_model → 64 → 1 → sigmoid → C range [min_C, max_C]
 
 import torch
 import torch.nn as nn
+from typing import Tuple
 
 
 class BaroreceptorMLP(nn.Module):
@@ -23,17 +24,25 @@ class BaroreceptorMLP(nn.Module):
         d_model: Input dimension
         min_C: Minimum number of centroids (default: 16)
         max_C: Maximum number of centroids (default: 512)
+        use_alpha_prediction: Whether to enable learned alpha prediction head (default: False)
     """
 
-    def __init__(self, d_model: int, min_C: int = 16, max_C: int = 512):
+    def __init__(self, d_model: int, min_C: int = 16, max_C: int = 512, use_alpha_prediction: bool = False):
         super().__init__()
         self.min_C = min_C
         self.max_C = max_C
+        self.use_alpha_prediction = use_alpha_prediction
 
-        # Ultra-lightweight MLP
+        # Ultra-lightweight MLP for C prediction
         self.net = nn.Sequential(
             nn.Linear(d_model, 64), nn.GELU(), nn.Linear(64, 1), nn.Sigmoid()
         )
+
+        # Optional alpha prediction head
+        if use_alpha_prediction:
+            self.alpha_net = nn.Sequential(
+                nn.Linear(d_model, 32), nn.GELU(), nn.Linear(32, 1), nn.Sigmoid()
+            )
 
     def forward(self, x: torch.Tensor) -> int:
         """
@@ -71,6 +80,59 @@ class BaroreceptorMLP(nn.Module):
         pressure = self.net(x_pooled).squeeze(-1)  # [B]
         C = self.min_C + pressure * (self.max_C - self.min_C)
         return C.round().int()
+
+    def predict_alpha(self, x: torch.Tensor) -> float:
+        """
+        Predict tension coefficient alpha based on input variance.
+
+        Maps input variance to alpha in [0.3, 0.8] using a sigmoid-based
+        smooth transition. Higher variance inputs tend toward lower alpha
+        (more expressivity), while lower variance inputs tend toward higher
+        alpha (more concentration).
+
+        Args:
+            x: [B, N, d_model] - input embeddings
+
+        Returns:
+            alpha: float in range [0.3, 0.8]
+        """
+        # Compute input variance across sequence dimension
+        var = x.var(dim=1).mean()  # scalar
+
+        # Threshold and scale for sigmoid mapping
+        threshold = 1.0
+        scale = 2.0
+
+        # Map variance to [0, 1] via sigmoid (inverted so high var -> low alpha)
+        alpha_raw = torch.sigmoid((threshold - var) * scale)
+
+        # Remap to [0.3, 0.8]
+        alpha = 0.3 + alpha_raw * 0.5
+
+        return alpha.item()
+
+    def forward_with_alpha(self, x: torch.Tensor) -> Tuple[int, float]:
+        """
+        Predict both number of centroids C and tension coefficient alpha.
+
+        Args:
+            x: [B, N, d_model] - input embeddings
+
+        Returns:
+            (C, alpha): C is int in [min_C, max_C], alpha is float in [0.3, 0.8]
+        """
+        C = self.forward(x)
+
+        if self.use_alpha_prediction and hasattr(self, 'alpha_net'):
+            # Use MLP head for alpha prediction from pooled embeddings
+            x_pooled = x.mean(dim=1)  # [B, d_model]
+            alpha_raw = self.alpha_net(x_pooled)  # [B, 1]
+            alpha = 0.3 + alpha_raw[0].item() * 0.5
+        else:
+            # Fall back to variance-based prediction
+            alpha = self.predict_alpha(x)
+
+        return C, alpha
 
 
 if __name__ == "__main__":

@@ -1,0 +1,21 @@
+{
+  "baseline_ppl": 39.16269397612951,
+  "bubble_ppl": 39.16269397612951,
+  "delta": 0.0,
+  "ratio": 1.0,
+  "config": {
+    "model": "Qwen/Qwen3-0.6B",
+    "dtype": "torch.float16",
+    "device": "cuda",
+    "eps": 0.005,
+    "num_bubbles": 32,
+    "top_k": 64,
+    "routing_bonus": 0.1,
+    "layers_swapped": [
+      0
+    ],
+    "max_length": 256,
+    "stride": 128,
+    "text_chars": 5000
+  }
+}

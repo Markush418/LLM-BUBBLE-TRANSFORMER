@@ -435,6 +435,145 @@ class SDOTAttentionV4(nn.Module):
         return output, None
 
 
+class DualHeadSDOTAttentionV4(nn.Module):
+    """
+    Dual-Head SDOT Attention V4 — Production dual-head tension architecture.
+
+    Two :class:`SDOTAttentionV4` instances operate in parallel.  Their outputs
+    are fused via a tension coefficient ``alpha``:
+
+        output = alpha * out_low + (1 - alpha) * out_high
+
+    When ``share_projections=True``, the Q/K/V/O projection *parameters* are
+    shared between the two heads (the same :class:`torch.nn.Parameter` tensors
+    back both heads, so optimisers see them exactly once).
+
+    Both heads retain their own non-projection state (baroreceptor, centroids,
+    Power-Diagram ``psi``, etc.), so they may produce different routing and
+    assignment patterns even when projections are shared.
+
+    Args:
+        All arguments accepted by :class:`SDOTAttentionV4`.
+        epsilon_low (float): Retained for API compatibility with the NumPy
+            ``DualHeadPlateauAttention`` reference.  Default: ``0.001``.
+        epsilon_high (float): Same as above.  Default: ``0.1``.
+        alpha (float): Tension fusion coefficient.  ``1.0`` → pure low-head,
+            ``0.0`` → pure high-head, ``0.5`` → balanced.  Default: ``0.5``.
+        share_projections (bool): If ``True``, the ``W_q``, ``W_k``, ``W_v``
+            and ``W_o`` parameters are shared between the two internal heads.
+            Default: ``True``.
+    """
+
+    def __init__(
+        self,
+        d_model: int,
+        num_heads: int,
+        num_kv_heads: Optional[int] = None,
+        num_centroids: int = 32,
+        use_baroreceptor: bool = True,
+        use_fps_init: bool = True,
+        use_power_diagrams: bool = False,
+        use_expert_routing: bool = True,
+        manifold_type: str = "euclidean",
+        min_C: int = 16,
+        max_C: int = 512,
+        top_k: int = 8,
+        temperature: float = 1.0,
+        warm_start_alpha: float = 0.7,
+        epsilon_low: float = 0.001,
+        epsilon_high: float = 0.1,
+        alpha: float = 0.5,
+        share_projections: bool = True,
+    ):
+        super().__init__()
+
+        self.epsilon_low = epsilon_low
+        self.epsilon_high = epsilon_high
+        self.alpha = alpha
+        self.share_projections = share_projections
+
+        # Build both internal heads with identical V4 configuration
+        common_kwargs = {
+            "d_model": d_model,
+            "num_heads": num_heads,
+            "num_kv_heads": num_kv_heads,
+            "num_centroids": num_centroids,
+            "use_baroreceptor": use_baroreceptor,
+            "use_fps_init": use_fps_init,
+            "use_power_diagrams": use_power_diagrams,
+            "use_expert_routing": use_expert_routing,
+            "manifold_type": manifold_type,
+            "min_C": min_C,
+            "max_C": max_C,
+            "top_k": top_k,
+            "temperature": temperature,
+            "warm_start_alpha": warm_start_alpha,
+        }
+
+        self.head_low = SDOTAttentionV4(**common_kwargs)
+        self.head_high = SDOTAttentionV4(**common_kwargs)
+
+        if share_projections:
+            # Share the Parameter tensors of W_q/k/v/o between the two heads.
+            # PyTorch's ``named_parameters()`` deduplicates by object identity,
+            # so shared tensors appear exactly once in the optimiser state.
+            for proj_name in ("W_q", "W_k", "W_v", "W_o"):
+                low_proj = getattr(self.head_low, proj_name)
+                high_proj = getattr(self.head_high, proj_name)
+                high_proj.weight = low_proj.weight
+                if low_proj.bias is not None and high_proj.bias is not None:
+                    high_proj.bias = low_proj.bias
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
+        return_assignments: bool = False,
+        previous_centroids: Optional[torch.Tensor] = None,
+    ) -> Tuple[torch.Tensor, Optional[Dict[str, Any]]]:
+        """
+        Forward pass with dual-head tension.
+
+        Args:
+            x: ``[B, N, d_model]`` — input tokens.
+            attention_mask: ``[B, N]`` (optional).
+            return_assignments: If ``True``, return per-head assignment info.
+            previous_centroids: ``[B, H, C, d_head]`` — warm-start from
+                previous layer (optional).
+
+        Returns:
+            output: ``[B, N, d_model]``
+            assignments_info: Nested dict with keys ``head_low`` and
+                ``head_high`` (if ``return_assignments=True``), else ``None``.
+        """
+        # Run both attention heads
+        out_low, info_low = self.head_low(
+            x,
+            attention_mask=attention_mask,
+            return_assignments=return_assignments,
+            previous_centroids=previous_centroids,
+        )
+        out_high, info_high = self.head_high(
+            x,
+            attention_mask=attention_mask,
+            return_assignments=return_assignments,
+            previous_centroids=previous_centroids,
+        )
+
+        # Tension fusion
+        output = self.alpha * out_low + (1.0 - self.alpha) * out_high
+
+        if return_assignments:
+            assignments_info: Dict[str, Any] = {
+                "head_low": info_low,
+                "head_high": info_high,
+                "alpha": self.alpha,
+            }
+            return output, assignments_info
+
+        return output, None
+
+
 if __name__ == "__main__":
     # Quick test
     print("[sdot_attention_v4] Running quick test...")

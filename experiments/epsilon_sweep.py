@@ -579,6 +579,91 @@ def analyze_tension_results(
     }
 
 
+def find_optimal_alpha(
+    tension_results: List[Dict], min_effective_rank_ratio: float = 0.5
+) -> Dict:
+    """Find the optimal tension coefficient alpha that maximizes concentration
+    while maintaining expressivity.
+
+    Score formula:
+        score = avg_concentration * avg_tension_balance
+                + 0.1 * min(avg_effective_rank / 500.0, 1.0)
+
+    The first term rewards high concentration together with balanced tension.
+    The second term provides a small bonus for preserving expressivity
+    (effective_rank), capped at 500.
+
+    Args:
+        tension_results: List of result dicts from run_tension_sweep().
+            Each dict must contain at minimum: "alpha", "concentration_ratio",
+            "effective_rank". "tension_balance" is optional.
+        min_effective_rank_ratio: Minimum ratio of effective rank to consider
+            (default 0.5). Not currently enforced in scoring but reserved
+            for future filtering.
+
+    Returns:
+        Dict with keys: alpha, score, avg_concentration, avg_effective_rank,
+        avg_tension_balance, num_layers. If tension_results is empty, returns
+        {"alpha": 0.5, "score": 0.0, "reason": "no results"}.
+    """
+    if not tension_results:
+        return {"alpha": 0.5, "score": 0.0, "reason": "no results"}
+
+    # Group results by alpha
+    groups: Dict[float, List[Dict]] = {}
+    for r in tension_results:
+        alpha = r.get("alpha")
+        if alpha is None:
+            continue
+        groups.setdefault(alpha, []).append(r)
+
+    if not groups:
+        return {"alpha": 0.5, "score": 0.0, "reason": "no results"}
+
+    best_alpha = 0.5
+    best_score = -float("inf")
+    best_stats = {}
+
+    for alpha, results in groups.items():
+        concentrations = [
+            r.get("concentration_ratio", 0.0) for r in results if "concentration_ratio" in r
+        ]
+        ranks = [
+            r.get("effective_rank", 0.0) for r in results if "effective_rank" in r
+        ]
+        tensions = [
+            r.get("tension_balance", 0.0) for r in results if "tension_balance" in r
+        ]
+
+        if not concentrations or not ranks:
+            continue
+
+        avg_concentration = float(np.mean(concentrations))
+        avg_rank = float(np.mean(ranks))
+        avg_tension = float(np.mean(tensions)) if tensions else 0.0
+
+        score = (
+            avg_concentration * avg_tension
+            + 0.1 * min(avg_rank / 500.0, 1.0)
+        )
+
+        if score > best_score:
+            best_score = score
+            best_alpha = alpha
+            best_stats = {
+                "avg_concentration": avg_concentration,
+                "avg_effective_rank": avg_rank,
+                "avg_tension_balance": avg_tension,
+                "num_layers": len(results),
+            }
+
+    return {
+        "alpha": best_alpha,
+        "score": best_score,
+        **best_stats,
+    }
+
+
 if __name__ == "__main__":
     import argparse
 
