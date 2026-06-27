@@ -1,0 +1,27 @@
+EL VERDADERO SPRINT 3 (Copia y pega esto al agente AHORA)
+El agente sugirió hacer Sprint 3 de métricas y Betti numbers. NO. Eso es perder el tiempo. Tienes un motor V8 funcionando a 2.67x, no lo lleves al taller a medirle la presión de las llantas.
+
+El Sprint 3 ES la inyección real para generar texto. Copia esto:
+
+DIRECTIVA: SPRINT 3 - GENERACIÓN AUTORREGRESIVA REAL
+CONTEXTO: El benchmark de módulos aislados fue un éxito (2.67x speedup). Ahora debemos demostrar que el Bubble Transformer puede reemplazar la atención nativa de Qwen y generar texto continuo sin colapsar el autoregressive decoding.
+
+ACCIÓN INMEDIATA:Utilizar el script scripts/inject_sdot_qwen.py que ya existe, pero ejecutarlo en MODO REAL sobre Qwen2.5-0.5B (o Qwen3-0.6B si hay VRAM).
+
+PASOS CRÍTICOS:
+
+Cargar el modelo real (AutoModelForCausalLM.from_pretrained) y el Tokenizer.
+Inyectar el módulo BubbleQwenAttention (nuestro V3 SDOT) en las capas objetivo (ej. capas 3, 7, 11) REEMPLAZANDO el Qwen2Attention original.
+NO hacer un solo forward pass estático. Implementar un bucle de generación autoregresiva:
+Tokenizar el prompt: "El inventor del Bubble Transformer descubrió que la atención dispersa es análoga a"
+Usar model.generate(max_new_tokens=50, do_sample=False) para que el modelo prediga los siguientes 50 tokens.
+Decodificar la salida a texto e imprimir el resultado.
+VALIDACIONES ESTRICTAS (Criterios de Aceptación):
+
+ El script no lanza RuntimeError de shapes.
+ El script no lanza NaN durante el generate().
+ La salida generada es texto legible en español/coherente (no necesita ser perfecta, pero no debe ser jeroglíficos).
+ Se logra ejecutar en la GPU sin causar Out-of-Memory (OOM).
+NOTA CRÍTICA SOBRE LA SIMILITUD:Esperamos que el texto generado difiera del texto base de Qwen. Esto es CORRECTO y se debe al Hard Clustering de Voronoi. NO intentes "arreglar" la similitud forzando a V3 a imitar a V2. V3 tiene una topología diferente.
+
+Si la generación de texto tiene éxito, el Sprint 3 está completado y el Bubble Transformer es una realidad funcional.
