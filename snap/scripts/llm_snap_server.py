@@ -20,9 +20,10 @@ from flask import Flask, send_file, jsonify, request
 app = Flask(__name__)
 
 # Storage paths
-_parent_dir = Path(__file__).parent
-if str(_parent_dir) not in sys.path:
-    sys.path.insert(0, str(_parent_dir))
+_PARENT_DIR = Path(__file__).parent
+_PYTHON_DIR = _PARENT_DIR.parent / 'python'
+if str(_PYTHON_DIR) not in sys.path:
+    sys.path.insert(0, str(_PYTHON_DIR))
 
 SNAPSHOTS_DIR = ".sisyphus/snapshots"
 AUTO_DIR = ".sisyphus/auto-snapshots"

@@ -22,7 +22,8 @@ import uuid
 from pathlib import Path
 
 # Add the LLM-BUBBLE directory to Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(_SCRIPT_DIR), 'python'))
 
 from llm_snap.core.interceptor import SnapshotInterceptor
 
@@ -199,9 +200,9 @@ def run_experiment_with_snapshot(args, run_id, storage_path):
     
     # Initialize snapshot interceptor
     interceptor = SnapshotInterceptor(storage_path)
-    
-print(f"Snapshotting enabled - Run ID: {run_id}")
-print(f"Storage: {storage_path}")
+
+    print(f"Snapshotting enabled - Run ID: {run_id}")
+    print(f"Storage: {storage_path}")
     print("-" * 60)
     
     # We'll simulate the interception by wrapping the experiment execution

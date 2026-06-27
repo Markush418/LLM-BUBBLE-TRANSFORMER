@@ -20,9 +20,9 @@ import threading
 from pathlib import Path
 
 # Add parent to path
-_parent_dir = str(Path(__file__).parent)
-if _parent_dir not in sys.path:
-    sys.path.insert(0, _parent_dir)
+_PARENT_DIR = str(Path(__file__).parent.parent / 'python')
+if _PARENT_DIR not in sys.path:
+    sys.path.insert(0, _PARENT_DIR)
 
 # Try to import watchdog, install if needed
 try:
