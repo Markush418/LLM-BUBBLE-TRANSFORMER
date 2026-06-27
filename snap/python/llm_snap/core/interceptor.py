@@ -18,7 +18,7 @@ from enum import Enum
 
 # Import SQLite store
 import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from llm_snap.storage.sqlite_store import SQLiteSnapshotStore
 
 
