@@ -1,0 +1,170 @@
+[
+  {
+    "layer": 0,
+    "effective_rank": 173.5517120361328,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.2004200667142868
+  },
+  {
+    "layer": 1,
+    "effective_rank": 171.79702758789062,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.2725314199924469
+  },
+  {
+    "layer": 2,
+    "effective_rank": 2.8158202171325684,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9998478889465332
+  },
+  {
+    "layer": 3,
+    "effective_rank": 3.4178550243377686,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9997672438621521
+  },
+  {
+    "layer": 4,
+    "effective_rank": 3.7107410430908203,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.999713659286499
+  },
+  {
+    "layer": 5,
+    "effective_rank": 4.475027561187744,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9995875954627991
+  },
+  {
+    "layer": 6,
+    "effective_rank": 4.968460559844971,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9994973540306091
+  },
+  {
+    "layer": 7,
+    "effective_rank": 5.409053802490234,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9993708729743958
+  },
+  {
+    "layer": 8,
+    "effective_rank": 5.837287425994873,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9993102550506592
+  },
+  {
+    "layer": 9,
+    "effective_rank": 6.6327691078186035,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.999128520488739
+  },
+  {
+    "layer": 10,
+    "effective_rank": 7.9074225425720215,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9987578988075256
+  },
+  {
+    "layer": 11,
+    "effective_rank": 9.614595413208008,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9983059763908386
+  },
+  {
+    "layer": 12,
+    "effective_rank": 10.049985885620117,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9981762766838074
+  },
+  {
+    "layer": 13,
+    "effective_rank": 10.808560371398926,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9979906678199768
+  },
+  {
+    "layer": 14,
+    "effective_rank": 11.226186752319336,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9979375600814819
+  },
+  {
+    "layer": 15,
+    "effective_rank": 13.130459785461426,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9974402189254761
+  },
+  {
+    "layer": 16,
+    "effective_rank": 18.495450973510742,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9958632588386536
+  },
+  {
+    "layer": 17,
+    "effective_rank": 24.491186141967773,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9938668608665466
+  },
+  {
+    "layer": 18,
+    "effective_rank": 31.7678279876709,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9909104108810425
+  },
+  {
+    "layer": 19,
+    "effective_rank": 42.867740631103516,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9856678247451782
+  },
+  {
+    "layer": 20,
+    "effective_rank": 55.83742141723633,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9767966866493225
+  },
+  {
+    "layer": 21,
+    "effective_rank": 68.00337219238281,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9652554988861084
+  },
+  {
+    "layer": 22,
+    "effective_rank": 78.28584289550781,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9489765167236328
+  },
+  {
+    "layer": 23,
+    "effective_rank": 87.661865234375,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.9298139214515686
+  },
+  {
+    "layer": 24,
+    "effective_rank": 94.5796890258789,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.905118465423584
+  },
+  {
+    "layer": 25,
+    "effective_rank": 99.9869384765625,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.8734396696090698
+  },
+  {
+    "layer": 26,
+    "effective_rank": 102.41703796386719,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.8388579487800598
+  },
+  {
+    "layer": 27,
+    "effective_rank": 163.6082000732422,
+    "intrinsic_dim": 1.0,
+    "anisotropy": 0.49082493782043457
+  }
+]

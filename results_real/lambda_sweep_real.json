@@ -1,0 +1,36 @@
+{
+  "mode": "real (Qwen3-0.6B)",
+  "baseline_layer_7_eff_rank": 13.096896171569824,
+  "lambda_sweep_results": [
+    {
+      "lam": 0.0,
+      "rank_ratio": 0.9964678745666216,
+      "eff_rank": 13.050636291503906,
+      "intrinsic_dim_mle": 6.1919058700667025
+    },
+    {
+      "lam": 0.25,
+      "rank_ratio": 1.02842899679322,
+      "eff_rank": 13.46922779083252,
+      "intrinsic_dim_mle": 6.163638792665126
+    },
+    {
+      "lam": 0.5,
+      "rank_ratio": 1.0247587378544276,
+      "eff_rank": 13.421158790588379,
+      "intrinsic_dim_mle": 6.066866736917821
+    },
+    {
+      "lam": 0.75,
+      "rank_ratio": 1.0243227835597972,
+      "eff_rank": 13.415449142456055,
+      "intrinsic_dim_mle": 6.04845511933042
+    },
+    {
+      "lam": 1.0,
+      "rank_ratio": 1.0242694816483777,
+      "eff_rank": 13.414751052856445,
+      "intrinsic_dim_mle": 6.0433765675011735
+    }
+  ]
+}

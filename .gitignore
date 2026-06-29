@@ -103,6 +103,8 @@ coverage.xml
 *.npy
 *.npz
 embeddings/
+embeddings_all_28/
+embeddings_real/
 !embeddings/.gitkeep
 
 # Generated plots and visualizations
@@ -112,6 +114,10 @@ plots/
 # Experiment results (JSON, logs)
 results/
 !results/.gitkeep
+# But keep FINAL/PERPLEXITY reports as documentation
+!results_real/**/*.md
+!results_real/**/*.json
+!results_real/**/*.png
 
 # Log files from experiments
 *.log
@@ -186,6 +192,7 @@ pip-delete-this-directory.txt
 *.backup
 *.swp
 *~
+*.SKIP
 .cache/
 .temp/
 .tmp/

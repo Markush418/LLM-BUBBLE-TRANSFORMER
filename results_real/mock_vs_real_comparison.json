@@ -1,0 +1,59 @@
+{
+  "mock_baseline": {
+    "effective_rank": 186.07797241210938,
+    "intrinsic_dim_mle": 37.43281143214967,
+    "anisotropy_index": 0.04158499442261582,
+    "pairwise_dist_mean": 1.4121569836770673,
+    "pairwise_dist_std": 0.07826554037346334,
+    "pairwise_dist_min": 1.1203680018685318,
+    "pairwise_dist_max": 1.7073738362499162,
+    "pairwise_dist_median": 1.4144098429560632,
+    "pairwise_dist_cv": 0.05542269115836567,
+    "spectral_log_det": -319.5318908691406,
+    "trace_estimate": 0.9943006731051117,
+    "trace_deterministic": 255.03988647460938,
+    "iso_score_k10": 0.3041599988937378,
+    "spectral_decay_rate": 0.8663315173078976,
+    "collapse_score": 0.8767616950793296,
+    "crowding_ratio_k10": 0.0,
+    "mean_nearest_neighbor_dist": 0.703624963760376,
+    "clustering_coefficient": 0.0,
+    "space_coverage": 0.395
+  },
+  "real_baseline_layer_7": {
+    "effective_rank": 13.096896171569824,
+    "intrinsic_dim_mle": 1.0,
+    "anisotropy_index": 0.9994497920396784,
+    "pairwise_dist_mean": 106.19603701133228,
+    "pairwise_dist_std": 764.4295946915121,
+    "pairwise_dist_min": 0.0,
+    "pairwise_dist_max": 6907.428857708304,
+    "pairwise_dist_median": 0.0,
+    "pairwise_dist_cv": 7.198287395695746,
+    "spectral_log_det": 2063.09814453125,
+    "trace_estimate": 269430.76299459493,
+    "trace_deterministic": 1905716864.0,
+    "iso_score_k10": 0.9996654391288757,
+    "spectral_decay_rate": 0.9705032478230288,
+    "collapse_score": 0.7900221341027207,
+    "crowding_ratio_k10": 0.018125,
+    "mean_nearest_neighbor_dist": 0.7893951535224915,
+    "clustering_coefficient": 0.04427430555555557,
+    "space_coverage": 0.4175
+  },
+  "mock_hybrid_avg_rank_ratio": 1.133672421685101,
+  "mock_plateau_avg_rank_ratio": 0.8677929716553098,
+  "real_hybrid_avg_rank_ratio": 1.4677091268091065,
+  "real_plateau_avg_rank_ratio": 1.254462251069333,
+  "common_eps_values": [
+    0.001,
+    0.01,
+    0.1,
+    1.0
+  ],
+  "verdict": {
+    "hybrid_better_mock": "True",
+    "hybrid_better_real": "True",
+    "mock_replicates_real": "True"
+  }
+}

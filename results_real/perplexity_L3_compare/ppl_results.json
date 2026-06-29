@@ -1,0 +1,20 @@
+{
+  "baseline": {
+    "ppl": 23.368971654270148,
+    "time_s": 16.75489568710327
+  },
+  "hybrid_lam1.0_eps0.01_chiller": {
+    "ppl": 24.30957303330866,
+    "lambda": 1.0,
+    "epsilon": 0.01,
+    "siri_mode": "chiller",
+    "time_s": 17.812476873397827
+  },
+  "hybrid_lam1.0_eps0.01_classical": {
+    "ppl": 24.30957303330866,
+    "lambda": 1.0,
+    "epsilon": 0.01,
+    "siri_mode": "classical",
+    "time_s": 17.550403356552124
+  }
+}

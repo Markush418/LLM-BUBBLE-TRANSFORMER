@@ -1,6 +1,6 @@
 # LLM-BUBBLE — Bubble Transformer Research
 
-> **Embedding Geometry Analysis + ε Sweet Spot Discovery**  
+> **Hybrid Attention Architecture: DeltaNet + SIRI + Power Diagram**
 > Plan A+B: Mapear distribución de embeddings bajo Sinkhorn vs Softmax y encontrar el coeficiente de viscosidad óptimo.
 
 ---
@@ -12,10 +12,47 @@ Determinar **qué embeddings** de Qwen 3.6 se concentran mejor en la "sección d
 ### Plan A — Embedding Geometry Map
 Comparar cómo se distribuyen los embeddings de Qwen 3.6 bajo:
 - **Softmax** (baseline, atención original de Qwen)
-- **Plateau/Sinkhorn** (atención de superficie mínima, con ε variable)
+- **DeltaNet** (atención lineal con delta rule, default post-SDOT)
+- **PlateauAttention/SIRI** (Sinkhorn doubly-stochastic preservando ε)
 
 ### Plan B — ε Sweet Spot
 Encontrar el rango de ε que produce máxima concentración de embeddings sin colapso dimensional.
+
+---
+
+## 🏗️ Arquitectura Híbrida (post-SDOT, junio 2026)
+
+[DEFINITION] La nueva arquitectura del Bubble Transformer combina:
+
+1. **DeltaNet** (Yang et al. 2024, arxiv:2406.06484) — atención lineal O(N) con delta rule para asociative recall
+2. **SIRI post-processing** (Sinkhorn-Knopp log-domain) — refinamiento doubly-stochastic opt-in
+3. **Power Diagram ψ** — bias en `log_S = -C/ε + ψ` para Laguerre tessellation
+4. **SIRI-Soft variants** (NEW, June 2026) — soft blend / chiller / sparse variants that preserve peakedness
+5. **Hybrid interpolation** — `out = λ·out_delta + (1-λ)·out_siri`
+
+```python
+from hybrid_attention import HybridAttention
+
+attn = HybridAttention(
+    d_model=1024,            # Qwen3-0.6B dimensions
+    num_heads=16,            # Qwen3 attention heads
+    epsilon=0.1,             # SIRI bandwidth
+    lam=0.5,                 # 0.5 = balanced hybrid
+    siri_mode="soft",        # classical|chiller|sparse|soft
+    siri_alpha=0.3,          # blend weight (soft mode only)
+    siri_beta=5.0,           # sharpening factor (chiller mode)
+)
+output, attn_matrix = attn(x, return_attention=True)
+```
+
+### Invariantes formales (preservados del Bubble Transformer original)
+
+- **Costo geométrico**: `C_ij = ‖Q_i - K_j‖²` (NO producto interno)
+- **SIRI doubly-stochastic**: `A ∈ Σₙ` (politopo de Birkhoff)
+- **Power Diagram ψ**: bias en log_Sinkhorn
+- **ε bandwidth**: rango operativo [0.001, 1.0]
+- **NumPy contract**: módulos core sin PyTorch
+- **τ = 5 iteraciones**: Sinkhorn convergence
 
 ---
 
@@ -24,34 +61,39 @@ Encontrar el rango de ε que produce máxima concentración de embeddings sin co
 ```
 LLM-BUBBLE/
 ├── experiments/
-│   ├── extract_embeddings.py   # Extrae embeddings de Qwen 3.6 por capa
-│   ├── plateau_attention.py    # PlateauAttentionMechanism (Sinkhorn-Knopp)
-│   ├── epsilon_sweep.py        # Sweep de ε + análisis de sweet spot
-│   ├── metrics.py              # Motor de 5 métricas de concentración
-│   ├── visualize.py            # Generador de 7 tipos de plots
-│   └── run_experiment.py       # Orchestrator principal (un comando)
+│   ├── run_experiment.py          # Orchestrator principal
+│   ├── config.py                  # Dataclass config + get_config()
+│   ├── plateau_attention.py       # SIRI core (log-domain Sinkhorn) — KEEP
+│   ├── deltanet_attention.py      # NEW: DeltaNet base attention
+│   ├── siri_postprocess.py        # NEW: SIRI as opt-in post-processor
+│   ├── power_diagrams.py          # NEW: ψ as explicit Laguerre bias
+│   ├── hybrid_attention.py        # NEW: DeltaNet + SIRI + ψ combination
+│   ├── metrics.py                 # 6 concentration/geometry metrics
+│   ├── spectral_metrics.py        # SIGMA paper collapse detection
+│   ├── epsilon_sweep.py           # Sweep controller + sweet spot
+│   ├── visualize.py               # 7 plot generators
+│   ├── extract_embeddings.py      # Qwen model extraction (GPU)
+│   ├── generate_mock_embeddings.py # Synthetic embeddings
+│   ├── tensor_compat.py           # NumPy fallback for PyTorch
+│   └── v3_core.py, v4_adapter.py  # Legacy support (kept)
 ├── data/
-│   └── test_corpus.jsonl       # Corpus de prueba (auto-generado)
 ├── embeddings/
-│   ├── softmax/                # Embeddings baseline de Qwen
-│   └── plateau/                # Embeddings con PlateauAttention
 ├── results/
-│   ├── epsilon_sweep.json      # Resultados completos del sweep
-│   └── sweet_spot_analysis.md  # Reporte de recomendación
 ├── plots/
-│   ├── effective_rank_curves.png
-│   ├── concentration_heatmap_*.png
-│   ├── pareto_frontier.png
-│   ├── anisotropy_vs_epsilon.png
-│   ├── intrinsic_dim_vs_epsilon.png
-│   ├── tsne_layer_*.png
-│   └── summary_dashboard.png
-├── docs/superpowers/specs/
-│   └── 2026-04-01-bubble-embedding-geometry-design.md
-├── requirements.txt
-├── texto.txt                   # Formalización matemática original TSM
-├── readme.rtf                  # Documentación arquitectónica RTF
-└── pyth.txt                    # Implementación PyTorch de referencia
+├── docs/
+│   ├── decisions/
+│   │   ├── 2026-06-27-sota-replacement-siri-preserved.md  # Architectural decision
+│   │   └── 2026-06-27-siri-power-diagram-math.md          # Mathematical formalism
+│   └── references.bib             # 17 papers BibTeX
+├── tests/
+│   ├── test_attention.py          # PlateauAttention (SIRI)
+│   ├── test_metrics.py            # Concentration metrics
+│   ├── test_power_diagrams.py     # NEW: Power Diagram ψ
+│   ├── test_deltanet_attention.py # NEW: DeltaNet delta rule
+│   ├── test_siri_postprocess.py   # NEW: SIRI post-processing
+│   ├── test_hybrid_attention.py   # NEW: Hybrid DeltaNet + SIRI + ψ
+│   └── ... (24 more test files)
+└── requirements.txt
 ```
 
 ---
@@ -59,34 +101,17 @@ LLM-BUBBLE/
 ## 🚀 Quick Start
 
 ```bash
-# 1. Instalar dependencias
+# Instalar dependencias
 pip install -r requirements.txt
 
-# 2. Ejecutar experimento completo
-python experiments/run_experiment.py --model "Qwen/Qwen3.6-Plus" --device cuda
+# Ejecutar experimento completo (mock mode, no GPU)
+python experiments/run_experiment.py --mode mock
 
-# 3. Ver resultados
-cat results/sweet_spot_analysis.md
-ls plots/
-```
+# Real mode (needs GPU + Qwen3-0.6B)
+python experiments/run_experiment.py --mode real
 
-### Opciones del Orchestrator
-
-```bash
-# Con corpus personalizado
-python experiments/run_experiment.py --corpus data/my_corpus.jsonl
-
-# Saltar extracción (si ya existen embeddings)
-python experiments/run_experiment.py --skip-extraction
-
-# Solo métricas, sin visualizaciones
-python experiments/run_experiment.py --skip-visualization
-
-# Valores de ε custom
-python experiments/run_experiment.py --epsilon-values 0.01 0.05 0.1 0.5
-
-# Capas objetivo custom
-python experiments/run_experiment.py --target-layers 3 7 11 15
+# Tests
+python -m pytest tests/ -v
 ```
 
 ---
@@ -112,90 +137,150 @@ python experiments/run_experiment.py --target-layers 3 7 11 15
 │  Input: corpus → extraer embeddings por capa         │
 └────────────────────┬────────────────────────────────┘
                      │
-        ┌────────────┴────────────┐
-        │                         │
-   ┌────▼────┐             ┌─────▼─────┐
-   │Softmax  │             │Plateau    │
-   │(baseline│             │Attention  │
-   │  Qwen)  │             │(Sinkhorn) │
-   └────┬────┘             └─────┬─────┘
-        │                         │
-        │              ┌──────────┼──────────┐
-        │              │          │          │
-        │           ε=0.01    ε=0.05    ε=0.1 ... ε=1.0
-        │              │          │          │
-        └──────┬───────┴──────────┴──────────┘
-               │
-    ┌──────────▼──────────┐
-    │  5 Métricas por capa │
-    │  + Heatmaps + t-SNE  │
-    │  + Pareto Frontier   │
-    │  + Sweet Spot Report │
-    └─────────────────────┘
+         ┌───────────┴───────────┐
+         │                       │
+    ┌────▼────┐             ┌────▼─────────┐
+    │Softmax  │             │Hybrid         │
+    │(baseline│             │DeltaNet + SIRI │
+    │  Qwen)  │             │+ Power Diagram│
+    └────┬────┘             └────┬─────────┘
+         │                       │
+         │              ┌────────┼────────┐
+         │              │        │        │
+         │           λ=1.0   λ=0.5   λ=0.0
+         │           (Delta) (Hybrid) (SIRI)
+         │              │        │        │
+         └──────┬───────┴────────┴────────┘
+                │
+     ┌──────────▼──────────┐
+     │  6 Métricas por capa │
+     │  + Heatmaps + t-SNE  │
+     │  + Pareto Frontier   │
+     │  + Sweet Spot Report │
+     └─────────────────────┘
 ```
+
+## 🧬 SIRI-Soft Variants (NEW, June 2026)
+
+The classical doubly-stochastic SIRI destroys attention peakedness. We identified 3 variants that preserve it:
+
+| Variant | Formula | Use case | PPL (L3, λ=0.5) |
+|---------|---------|----------|------------------|
+| **Soft blend** | `(1-α)·softmax + α·SIRI` | Best balanced | **26.76** |
+| Classical | Sinkhorn(-C/ε) | Strict doubly-stoch | 30.14 |
+| Chiller (β) | Sinkhorn(scores·β) | Sharper peaks | 39.39 |
+| Sparse (ReLU) | Sinkhorn(ReLU(-C/ε)) | Very sparse | — |
+
+**Empirical evidence** (Qwen3-0.6B, layer 3 swap):
+- Baseline: PPL 23.37
+- Soft blend (α=0.7): PPL 26.76 (Δ +3.39)
+- Pure SIRI: PPL 30.14 (Δ +6.77, ~2× worse)
+
+See `results_real/PERPLEXITY_REPORT.md` and `experiments/siri_soft.py` for details.
 
 ---
 
-## 🧪 Ejecutar Tests Unitarios
+## 🧪 Ejecutar Tests
 
 ```bash
-# Test individual de cada módulo
-python experiments/plateau_attention.py   # Test PlateauAttention
-python experiments/metrics.py             # Test métricas
+# Suite completa
+python -m pytest tests/ -v
 
-# Test completo del pipeline (sin modelo real)
-python experiments/test_pipeline.py       # Mock-based validation
+# Test individual de cada módulo
+python experiments/plateau_attention.py
+python experiments/deltanet_attention.py
+python experiments/power_diagrams.py
+python experiments/siri_postprocess.py
+python experiments/hybrid_attention.py
+
+# Test específico
+python -m pytest tests/test_hybrid_attention.py -v
 ```
+
+**Estado actual**: 462 tests passing, 2 skipped, 0 failed (June 28, 2026).
 
 ---
 
 ## 📖 Referencia Teórica
 
-### Bubble Transformer (TSM)
+### Bubble Transformer (TSM) — preservado
+
 La atención se reformula como un problema de **Transporte Óptimo Entrópico**:
 
-$$\mathcal{E}(A) = \langle A, C \rangle - \epsilon H(A)$$
+$$\mathcal{E}(A) = \langle A, C \rangle - \epsilon \cdot H(A)$$
 
 Donde:
 - $A$ = matriz de atención (superficie mínima)
-- $C_{ij} = \|Q_i - K_j\|_2^2$ = matriz de costo geométrico
+- $C_{ij} = \|Q_i - K_j\|_2^2$ = matriz de costo geométrico (NO QK⊤)
 - $H(A)$ = entropía de Shannon (presión interna)
-- $\epsilon$ = coeficiente de viscosidad (controla sparsity)
+- $\epsilon$ = bandwidth/temperatura (controla sparsity)
 
-### Algoritmo de Sinkhorn-Knopp
-Resuelve la minimización en dominio logarítmico:
+### SIRI (Sinkhorn Iterative Regularized Inference)
+
+Algoritmo de Sinkhorn-Knopp en dominio logarítmico (preservado):
 
 ```
-log_S = -C / ε
-u, v = 0  # potenciales duales
+log_S = -C / ε + ψ  # log-domain + Power Diagram bias
+u, v = 0             # potenciales duales
 for τ iterations:
-    u = -logsumexp(log_S + v)
-    v = -logsumexp(log_S + u)
-A = exp(log_S + u + v)
+    u = -logsumexp(log_S + v, axis=-1)
+    v = -logsumexp(log_S + u, axis=-2)
+A = exp(log_S + u + v)  # doubly-stochastic
 ```
 
-### ε y Concentración
-- **ε → 0**: Atención colapsa a one-hot (máxima concentración, pérdida de expressividad)
-- **ε → ∞**: Atención converge a uniforme (mínima concentración, sin sparsity)
-- **Sweet spot**: Máxima concentración con effective rank ≥ 50% del baseline
+Convergencia: $\tau = 5$ iteraciones, error $O(\exp(-10\epsilon \sigma_{max}(C)))$.
+
+### DeltaNet (NeurIPS 2024)
+
+Para cada token $t$:
+```
+v_old = S_{t-1}^T k_t        # retrieve
+delta = v_t - v_old          # correction
+S_t = S_{t-1} + k_t delta^T   # update
+o_t = S_t^T q_t              # output
+```
+
+O(N) en inference, paralelizable por chunks.
+
+### ε como Bandwidth
+
+- **ε → 0**: Atención colapsa a one-hot (máxima concentración)
+- **ε → ∞**: Atención converge a uniforme (sin sparsity)
+- **Sweet spot**: ε ≈ 0.001 (validado empíricamente para Qwen3)
+
+---
+
+## 📝 Decisión Arquitectónica
+
+Ver [`docs/decisions/2026-06-27-sota-replacement-siri-preserved.md`](docs/decisions/2026-06-27-sota-replacement-siri-preserved.md) para análisis completo de 8 papers SOTA.
+
+**Top-2 candidatas evaluadas**:
+1. **DeltaNet** (Yang et al. 2024) — default, NeurIPS-grade, O(N)
+2. **Kimi Linear / KDA** (Kimi Team 2025) — opt-in, Oct 2025, drop-in replacement
+
+**Arquitectura adoptada**: Hybrid DeltaNet (default) + SIRI post-processing + Power Diagram ψ.
+
+SDOT fue eliminado por decisión del usuario (junio 2026); SIRI y Power Diagram se conservan como invariantes formales.
 
 ---
 
 ## 📝 Notas de Implementación
 
 - **Modelo**: Qwen 3.6 usa atención híbrida (3 capas DeltaNet + 1 full attention). Las capas objetivo son las de full attention: [3, 7, 11, 15, 19, 23]
-- **Dominio logarítmico**: Previene underflow numérico en Sinkhorn
-- **τ = 5 iteraciones**: Suficiente para convergencia práctica (verificado en Sinkformers paper)
-- **bfloat16**: Para eficiencia de memoria durante extracción de embeddings
+- **Dominio logarítmico**: Sinkhorn previene underflow numérico en ε < 0.01
+- **τ = 5 iteraciones**: Convergencia práctica (Sinkformers paper)
+- **bfloat16**: Para eficiencia de memoria durante extracción
+- **Power Diagram ψ**: bias aditivo en log_Sinkhorn, learnable projection W_ψ
 
 ---
 
-## 🔮 Próximos Pasos (Post Plan A+B)
+## 🔮 Próximos Pasos
 
-1. **Plan C**: Dual-Head Tension — prevenir colapso representacional
-2. **Plan D**: Layer Selection — qué capas de Qwen reemplazar
-3. **Plan E**: Cost Matrix Engineering — mejores funciones de costo que L2
+1. **Plan C**: Kimi Linear / KDA opt-in para máxima SOTA (2025)
+2. **Plan D**: Layer selection adaptativo con HybridAttention
+3. **Plan E**: Cost Matrix Engineering (mejores funciones de costo que L2)
 
 ---
 
-*LLM-BUBBLE v0.1 · Bubble Transformer Research · Abril 2026*
+*LLM-BUBBLE v0.2 · Bubble Transformer Research · Junio 2026*  
+*Migración SDOT → DeltaNet completada · SIRI y Power Diagram preservados*

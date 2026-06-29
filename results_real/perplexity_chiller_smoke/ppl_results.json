@@ -1,0 +1,27 @@
+{
+  "baseline": {
+    "ppl": 30.00037236319303,
+    "time_s": 5.0448808670043945
+  },
+  "hybrid_lam0.0_eps0.01_chiller": {
+    "ppl": 46.289162332838444,
+    "lambda": 0.0,
+    "epsilon": 0.01,
+    "siri_mode": "chiller",
+    "time_s": 4.737272500991821
+  },
+  "hybrid_lam0.5_eps0.01_chiller": {
+    "ppl": 32.26530858907476,
+    "lambda": 0.5,
+    "epsilon": 0.01,
+    "siri_mode": "chiller",
+    "time_s": 4.411997079849243
+  },
+  "hybrid_lam1.0_eps0.01_chiller": {
+    "ppl": 32.22352340965141,
+    "lambda": 1.0,
+    "epsilon": 0.01,
+    "siri_mode": "chiller",
+    "time_s": 4.4435718059539795
+  }
+}

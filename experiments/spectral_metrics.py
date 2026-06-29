@@ -11,9 +11,25 @@ Pure NumPy implementation.
 import numpy as np
 from typing import Dict
 
+try:
+    from tensor_compat import ops as _ops
+except ImportError:
+    _ops = None
 
-def compute_gram_matrix(embeddings: np.ndarray) -> np.ndarray:
+
+def _to_numpy(x):
+    """Defensive conversion to NumPy — handles torch tensors, numpy arrays, lists."""
+    if _ops is not None:
+        return _ops.to_numpy(x)
+    if hasattr(x, "detach") and hasattr(x, "cpu"):
+        return x.detach().cpu().numpy()
+    return np.asarray(x)
+
+
+def compute_gram_matrix(embeddings) -> np.ndarray:
     """Compute Gram matrix G = X @ X.T"""
+    if hasattr(embeddings, "ndim") is False:
+        embeddings = _to_numpy(embeddings)
     if embeddings.ndim == 3:
         embeddings = embeddings.reshape(-1, embeddings.shape[-1])
     embeddings = embeddings.astype(np.float32)
@@ -52,12 +68,26 @@ def spectral_bounds(gram_matrix: np.ndarray, n_samples: int = 100) -> Dict[str, 
 
 
 def iso_score(embeddings: np.ndarray, k: int = 10) -> float:
-    """Isotropy score: fraction of variance explained by top-k eigenvalues"""
+    """Isotropy score: fraction of variance explained by top-k eigenvalues
+
+    Returns 0.0 for perfectly collapsed embeddings (zero variance after centering).
+    Returns a value in (0, 1) otherwise; closer to 1/k means isotropic,
+    closer to 1.0 means variance is dominated by the top-k directions.
+    """
+    embeddings = _to_numpy(embeddings)
     if embeddings.ndim == 3:
         embeddings = embeddings.reshape(-1, embeddings.shape[-1])
     centered = embeddings - embeddings.mean(axis=0, keepdims=True)
+    # Collapse detection: zero variance after centering.
+    if float(np.max(np.abs(centered))) < 1e-10:
+        return 0.0
     cov = (centered.T @ centered) / centered.shape[0]
-    eigenvalues = np.linalg.eigvalsh(cov.astype(np.float32))
+    cov_reg = cov + np.eye(cov.shape[0]) * 1e-6
+    try:
+        eigenvalues = np.linalg.eigvalsh(cov_reg.astype(np.float32))
+    except np.linalg.LinAlgError:
+        _, S, _ = np.linalg.svd(centered.astype(np.float32), full_matrices=False)
+        eigenvalues = S ** 2 / centered.shape[0]
     eigenvalues = np.sort(eigenvalues)[::-1]
     total_variance = np.sum(eigenvalues)
     if total_variance < 1e-10:
@@ -68,6 +98,7 @@ def iso_score(embeddings: np.ndarray, k: int = 10) -> float:
 
 def spectral_decay_rate(embeddings: np.ndarray) -> float:
     """Estimate spectral decay rate alpha in: lambda_i ~ i^(-alpha)"""
+    embeddings = _to_numpy(embeddings)
     if embeddings.ndim == 3:
         embeddings = embeddings.reshape(-1, embeddings.shape[-1])
     centered = embeddings - embeddings.mean(axis=0, keepdims=True)
@@ -107,8 +138,9 @@ def collapse_score(gram_matrix: np.ndarray) -> float:
     return float(np.clip(collapse, 0.0, 1.0))
 
 
-def compute_all_spectral_metrics(embeddings: np.ndarray) -> Dict[str, float]:
+def compute_all_spectral_metrics(embeddings) -> Dict[str, float]:
     """Compute all spectral metrics in one call"""
+    embeddings = _to_numpy(embeddings)
     if embeddings.ndim == 3:
         embeddings = embeddings.reshape(-1, embeddings.shape[-1])
     G = compute_gram_matrix(embeddings)

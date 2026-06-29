@@ -12,6 +12,21 @@ from typing import Dict, Optional
 from scipy.spatial.distance import pdist as scipy_pdist
 from scipy.spatial.distance import squareform
 
+try:
+    from tensor_compat import ops as _ops
+except ImportError:
+    _ops = None
+
+
+def _to_numpy(x):
+    """Defensive conversion to NumPy — handles torch tensors, numpy arrays, lists."""
+    if _ops is not None:
+        return _ops.to_numpy(x)
+    if hasattr(x, "detach") and hasattr(x, "cpu"):
+        return x.detach().cpu().numpy()
+    return np.asarray(x)
+
+
 # Spectral metrics (SIGMA paper - arXiv:2601.03385)
 try:
     from .spectral_metrics import compute_all_spectral_metrics
@@ -25,11 +40,12 @@ except ImportError:
     from crowding_metric import compute_all_crowding_metrics
 
 
-def effective_rank(embeddings: np.ndarray) -> float:
+def effective_rank(embeddings) -> float:
     """
     Effective rank via SVD: exp(H(p)) where p_i = sigma_i / sum(sigma).
     embeddings: [N, D] or [B, N, D]
     """
+    embeddings = _to_numpy(embeddings)
     if embeddings.ndim == 3:
         embeddings = embeddings.reshape(-1, embeddings.shape[-1])
     centered = embeddings - embeddings.mean(axis=0, keepdims=True)
@@ -42,11 +58,12 @@ def effective_rank(embeddings: np.ndarray) -> float:
     return float(np.exp(entropy))
 
 
-def intrinsic_dimension_mle(embeddings: np.ndarray, k: int = 10) -> float:
+def intrinsic_dimension_mle(embeddings, k: int = 10) -> float:
     """
     MLE estimator for intrinsic dimensionality (Levina & Bickel 2004).
     Uses k-NN distances.
     """
+    embeddings = _to_numpy(embeddings)
     if embeddings.ndim == 3:
         embeddings = embeddings.reshape(-1, embeddings.shape[-1])
     N = embeddings.shape[0]
@@ -69,11 +86,12 @@ def intrinsic_dimension_mle(embeddings: np.ndarray, k: int = 10) -> float:
     return max(1.0, min(float(d_hat), float(embeddings.shape[-1])))
 
 
-def anisotropy_index(embeddings: np.ndarray) -> float:
+def anisotropy_index(embeddings) -> float:
     """
     Ratio of max eigenvalue to sum of eigenvalues of covariance matrix.
     1.0 = fully anisotropic, 1/d = perfectly isotropic.
     """
+    embeddings = _to_numpy(embeddings)
     if embeddings.ndim == 3:
         embeddings = embeddings.reshape(-1, embeddings.shape[-1])
     centered = embeddings - embeddings.mean(axis=0, keepdims=True)
@@ -91,8 +109,9 @@ def anisotropy_index(embeddings: np.ndarray) -> float:
     return float(eigenvalues[-1] / eigenvalues.sum())
 
 
-def pairwise_distance_stats(embeddings: np.ndarray) -> Dict[str, float]:
+def pairwise_distance_stats(embeddings) -> Dict[str, float]:
     """Compute statistics of pairwise distances."""
+    embeddings = _to_numpy(embeddings)
     if embeddings.ndim == 3:
         embeddings = embeddings.reshape(-1, embeddings.shape[-1])
     dists = scipy_pdist(embeddings.astype(np.float32))
@@ -118,37 +137,51 @@ def pairwise_distance_stats(embeddings: np.ndarray) -> Dict[str, float]:
 
 
 def concentration_ratio(
-    attention_matrix: np.ndarray, threshold_factor: float = 1.0
+    attention_matrix, threshold_factor: float = 1.0
 ) -> float:
     """
     Fraction of entries above threshold = threshold_factor / N.
     Lower = more concentrated (sparser).
     """
+    attention_matrix = _to_numpy(attention_matrix)
     if attention_matrix.ndim == 4:
         attention_matrix = attention_matrix.mean(axis=(0, 1))
     elif attention_matrix.ndim == 3:
         attention_matrix = attention_matrix.mean(axis=0)
     N = attention_matrix.shape[-1]
     threshold = threshold_factor / N
-    active = np.sum(attention_matrix > threshold)
+    active = np.sum(attention_matrix >= threshold)
     total = attention_matrix.size
     return float(active / total)
 
 
-def attention_entropy(attention_matrix: np.ndarray) -> float:
-    """Entropy of the attention distribution. Lower = more peaked."""
+def attention_entropy(attention_matrix) -> float:
+    """Entropy of the attention distribution. Lower = more peaked.
+
+    Convention: per-row Shannon entropy averaged across rows (the standard
+    attention entropy used in the Transformer literature).
+    """
+    attention_matrix = _to_numpy(attention_matrix)
     if attention_matrix.ndim == 4:
         attention_matrix = attention_matrix.mean(axis=(0, 1))
     elif attention_matrix.ndim == 3:
         attention_matrix = attention_matrix.mean(axis=0)
-    A = attention_matrix.reshape(-1, attention_matrix.shape[-1])
-    A = A + 1e-10
-    A = A / A.sum(axis=-1, keepdims=True)
-    return float(np.mean(-np.sum(A * np.log(A), axis=-1)))
+
+    A = attention_matrix.astype(np.float32) + 1e-10
+
+    if A.ndim >= 2:
+        # Per-row entropy, averaged across rows. Standard for attention.
+        # Always normalize each row so it sums to 1 (defensive: handles non-row-stochastic inputs).
+        row_sums = A.sum(axis=-1, keepdims=True)
+        A_norm = A / np.maximum(row_sums, 1e-10)
+        return float(np.mean(-np.sum(A_norm * np.log(A_norm), axis=-1)))
+
+    A = A / A.sum()
+    return float(-np.sum(A * np.log(A)))
 
 
 def compute_all_metrics(
-    embeddings: np.ndarray,
+    embeddings,
     attention_matrix: Optional[np.ndarray] = None,
     baseline_effective_rank: Optional[float] = None,
     attention_low: Optional[np.ndarray] = None,
@@ -185,7 +218,7 @@ def compute_all_metrics(
         # Fallback: spectral metrics are critical but we continue on error
         metrics["spectral_log_det"] = 0.0
         metrics["collapse_score"] = 0.0
-        metrics["spectral_error"] = float(str(e))
+        metrics["spectral_error"] = str(e)
 
     # ─── Crowding Metrics ────────────────────────────────────���───────────────
     try:
@@ -194,7 +227,7 @@ def compute_all_metrics(
     except Exception as e:
         # Fallback: crowding metrics are supplementary
         metrics["crowding_ratio_k10"] = 0.0
-        metrics["crowding_error"] = float(str(e))
+        metrics["crowding_error"] = str(e)
 
     # ─── Attention Metrics ────────────────────────────────────────────────────
     if attention_matrix is not None:
@@ -230,12 +263,13 @@ def compute_metrics_batch(
     return results
 
 
-def cost_condition_number(cost_matrix: np.ndarray) -> float:
+def cost_condition_number(cost_matrix) -> float:
     """
     Condition number of cost matrix via SVD: sigma_max / sigma_min.
     Higher = more ill-conditioned. Indicates numerical stability of Sinkhorn.
     cost_matrix: [B, heads, N, N] or [N, N]
     """
+    cost_matrix = _to_numpy(cost_matrix)
     if cost_matrix.ndim > 2:
         # Average over batch and heads
         cost_matrix = cost_matrix.mean(axis=tuple(range(cost_matrix.ndim - 2)))
@@ -246,12 +280,13 @@ def cost_condition_number(cost_matrix: np.ndarray) -> float:
     return float(S[0] / S[-1])
 
 
-def cost_spectral_gap(cost_matrix: np.ndarray) -> float:
+def cost_spectral_gap(cost_matrix) -> float:
     """
     Spectral gap of cost matrix: sigma_1 / sigma_2.
     Higher = more dominant principal component. Indicates cost matrix rank structure.
     cost_matrix: [B, heads, N, N] or [N, N]
     """
+    cost_matrix = _to_numpy(cost_matrix)
     if cost_matrix.ndim > 2:
         cost_matrix = cost_matrix.mean(axis=tuple(range(cost_matrix.ndim - 2)))
     _, S, _ = np.linalg.svd(cost_matrix.astype(np.float32), full_matrices=False)
@@ -261,7 +296,7 @@ def cost_spectral_gap(cost_matrix: np.ndarray) -> float:
     return float(S[0] / S[1])
 
 
-def tension_balance(attention_low: np.ndarray, attention_high: np.ndarray) -> float:
+def tension_balance(attention_low, attention_high) -> float:
     """
     Measures how different the two attention patterns are.
     0.0 = identical patterns (no tension)
@@ -269,8 +304,8 @@ def tension_balance(attention_low: np.ndarray, attention_high: np.ndarray) -> fl
 
     Computed as 1 - cosine_similarity(flatten(A_low), flatten(A_high))
     """
-    a = attention_low.flatten().astype(np.float32)
-    b = attention_high.flatten().astype(np.float32)
+    a = _to_numpy(attention_low).flatten().astype(np.float32)
+    b = _to_numpy(attention_high).flatten().astype(np.float32)
     norm_a = np.linalg.norm(a)
     norm_b = np.linalg.norm(b)
     if norm_a < 1e-10 or norm_b < 1e-10:

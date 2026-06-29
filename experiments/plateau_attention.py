@@ -12,6 +12,20 @@ import numpy as np
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple
 
+try:
+    from tensor_compat import ops as _ops
+except ImportError:
+    _ops = None
+
+
+def _to_numpy(x):
+    """Defensive conversion to NumPy — handles torch tensors, numpy arrays, lists."""
+    if _ops is not None:
+        return _ops.to_numpy(x)
+    if hasattr(x, "detach") and hasattr(x, "cpu"):
+        return x.detach().cpu().numpy()
+    return np.asarray(x)
+
 
 # =============================================================================
 # Cost Function Hierarchy
@@ -253,15 +267,20 @@ class PlateauAttentionMechanism:
 
     def forward(
         self,
-        x: np.ndarray,
+        x,
         mask: Optional[np.ndarray] = None,
         return_attention: bool = False,
-    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-        B, N, D = x.shape
+    ):
+        _is_torch = hasattr(x, "detach") and hasattr(x, "cpu")
+        x_np = _to_numpy(x).astype(np.float32)
+        if x_np.ndim != 3:
+            raise ValueError(f"Expected 3D input [B, N, D], got shape {x_np.shape}")
 
-        Q = x @ self.W_q
-        K = x @ self.W_k
-        V = x @ self.W_v
+        B, N, D = x_np.shape
+
+        Q = x_np @ self.W_q
+        K = x_np @ self.W_k
+        V = x_np @ self.W_v
 
         Q = Q.reshape(B, N, self.num_heads, self.head_dim).transpose(0, 2, 1, 3)
         K = K.reshape(B, N, self.num_heads, self.head_dim).transpose(0, 2, 1, 3)
@@ -279,8 +298,23 @@ class PlateauAttentionMechanism:
         output = output @ self.W_o
 
         if return_attention:
+            if _is_torch:
+                import torch as _torch
+                return _torch.from_numpy(output).to(x.dtype if hasattr(x, "dtype") else _torch.float32), _torch.from_numpy(A).to(x.dtype if hasattr(x, "dtype") else _torch.float32)
             return output, A
+        if _is_torch:
+            import torch as _torch
+            return _torch.from_numpy(output).to(x.dtype if hasattr(x, "dtype") else _torch.float32)
         return output
+
+    def __call__(
+        self,
+        x: np.ndarray,
+        mask: Optional[np.ndarray] = None,
+        return_attention: bool = False,
+    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        """Callable interface — delegates to forward()."""
+        return self.forward(x, mask=mask, return_attention=return_attention)
 
 
 class PlateauAttentionBlock:
@@ -314,13 +348,27 @@ class PlateauAttentionBlock:
         )
         self.ff_b2 = np.zeros(d_model, dtype=np.float32)
 
-    def forward(self, x: np.ndarray, mask: Optional[np.ndarray] = None) -> np.ndarray:
-        x = x + self.attention.forward(self.norm1.forward(x), mask=mask)[0]
-        h = x @ self.ff_w1 + self.ff_b1
+    def forward(self, x, mask: Optional[np.ndarray] = None):
+        _is_torch = hasattr(x, "detach") and hasattr(x, "cpu")
+        x_np = _to_numpy(x).astype(np.float32)
+        att_out = self.attention.forward(self.norm1.forward(x_np), mask=mask)
+        if isinstance(att_out, tuple):
+            attn_out = att_out[0]
+        else:
+            attn_out = att_out
+        x_np = x_np + attn_out
+        h = x_np @ self.ff_w1 + self.ff_b1
         h = gelu(h)
         h = h @ self.ff_w2 + self.ff_b2
-        x = x + self.norm2.forward(h)
-        return x
+        x_np = x_np + self.norm2.forward(h)
+        if _is_torch:
+            import torch as _torch
+            return _torch.from_numpy(x_np).to(x.dtype if hasattr(x, "dtype") else _torch.float32)
+        return x_np
+
+    def __call__(self, x, mask: Optional[np.ndarray] = None):
+        """Callable interface — delegates to forward()."""
+        return self.forward(x, mask=mask)
 
 
 class DualHeadPlateauAttention:
@@ -443,15 +491,29 @@ class DualHeadPlateauAttention:
             return output, A_low, A_high
         return output
 
+    def __call__(
+        self,
+        x: np.ndarray,
+        mask: Optional[np.ndarray] = None,
+        return_attention: bool = False,
+    ) -> Tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray]]:
+        """Callable interface — delegates to forward()."""
+        return self.forward(x, mask=mask, return_attention=return_attention)
+
 
 class LayerNorm:
     def __init__(self, d: int, eps: float = 1e-5):
         self.eps = eps
 
-    def forward(self, x: np.ndarray) -> np.ndarray:
-        mean = np.mean(x, axis=-1, keepdims=True)
-        var = np.var(x, axis=-1, keepdims=True)
-        return (x - mean) / np.sqrt(var + self.eps)
+    def forward(self, x):
+        x_np = _to_numpy(x).astype(np.float32)
+        mean = np.mean(x_np, axis=-1, keepdims=True)
+        var = np.var(x_np, axis=-1, keepdims=True)
+        out = (x_np - mean) / np.sqrt(var + self.eps)
+        if hasattr(x, "detach") and hasattr(x, "cpu"):
+            import torch as _torch
+            return _torch.from_numpy(out).to(x.dtype if hasattr(x, "dtype") else _torch.float32)
+        return out
 
 
 def gelu(x: np.ndarray) -> np.ndarray:

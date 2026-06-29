@@ -1,9 +1,28 @@
 # Spec: Plan A+B Combined — Embedding Geometry Map + ε Sweet Spot
 
-**Date**: 2026-04-01  
-**Project**: LLM-BUBBLE / Bubble Transformer Research  
-**Author**: Sisyphus (automate.dev)  
-**Status**: Design Complete
+**Date**: 2026-04-01 (initial), updated 2026-06-27 (architectural migration)
+**Project**: LLM-BUBBLE / Bubble Transformer Research
+**Author**: Sisyphus (automate.dev)
+**Status**: Design Complete (initial) → Architecture Updated (migration)
+
+---
+
+## 0. Architecture Migration (2026-06-27)
+
+**Decision**: SDOT replaced by **Hybrid DeltaNet + SIRI + Power Diagram ψ**.
+
+See `docs/decisions/2026-06-27-sota-replacement-siri-preserved.md` for full rationale.
+See `docs/decisions/2026-06-27-siri-power-diagram-math.md` for mathematical formalism.
+
+**New pipeline**:
+```
+Qwen 3.6 → embeddings → HybridAttention(DeltaNet + SIRI + ψ) → metrics
+                         ├── DeltaNet (O(N) base attention, NeurIPS 2024)
+                         ├── SIRI post-processing (Sinkhorn log-domain, opt-in)
+                         └── Power Diagram ψ (Laguerre bias on log_Sinkhorn)
+```
+
+SIRI and Power Diagram are preserved as invariants. SDOT (Voronoi-based) is removed.
 
 ---
 

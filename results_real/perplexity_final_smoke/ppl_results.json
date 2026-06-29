@@ -1,0 +1,48 @@
+{
+  "baseline": {
+    "ppl": 30.00037236319303,
+    "time_s": 23.749390125274658
+  },
+  "hybrid_lam0.5_eps0.01_soft": {
+    "ppl": 35.16816167528418,
+    "lambda": 0.5,
+    "epsilon": 0.01,
+    "siri_mode": "soft",
+    "time_s": 4.628531217575073
+  },
+  "hybrid_lam1.0_eps0.01_soft": {
+    "ppl": 31.617437420960844,
+    "lambda": 1.0,
+    "epsilon": 0.01,
+    "siri_mode": "soft",
+    "time_s": 4.281896591186523
+  },
+  "hybrid_lam0.5_eps0.01_chiller": {
+    "ppl": 43.91744173211317,
+    "lambda": 0.5,
+    "epsilon": 0.01,
+    "siri_mode": "chiller",
+    "time_s": 4.270216941833496
+  },
+  "hybrid_lam1.0_eps0.01_chiller": {
+    "ppl": 31.617437420960844,
+    "lambda": 1.0,
+    "epsilon": 0.01,
+    "siri_mode": "chiller",
+    "time_s": 4.281129837036133
+  },
+  "hybrid_lam0.5_eps0.01_classical": {
+    "ppl": 37.95037792963343,
+    "lambda": 0.5,
+    "epsilon": 0.01,
+    "siri_mode": "classical",
+    "time_s": 4.320266246795654
+  },
+  "hybrid_lam1.0_eps0.01_classical": {
+    "ppl": 31.617437420960844,
+    "lambda": 1.0,
+    "epsilon": 0.01,
+    "siri_mode": "classical",
+    "time_s": 4.25995945930481
+  }
+}
