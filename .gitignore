@@ -1,232 +1,55 @@
-# ============================================================
-# LLM-BUBBLE .gitignore
-# Comprehensive ignore rules for GitHub publication
-# ============================================================
-
-# ------------------------------------------------------------
-# Python - Bytecode, packages, build artifacts
-# ------------------------------------------------------------
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-*.egg
-*.egg-info/
-*.manifest
-*.spec
-dist/
-build/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.pip-wheel
-
-# ------------------------------------------------------------
-# Virtual Environments - NEVER commit virtualenvs
-# ------------------------------------------------------------
-venv312/
-.venv/
+.Python
 venv/
+venv312/
 env/
 ENV/
-env.bak/
-venv.bak/
 
-# ------------------------------------------------------------
-# IDE / Editors
-# ------------------------------------------------------------
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*.sublime-*
-*.code-workspace
-.fleet/
 
-# ------------------------------------------------------------
-# OS - Operating system generated files
-# ------------------------------------------------------------
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-ehthumbs_vista.db
-desktop.ini
-$RECYCLE.BIN/
-*.stackdump
-[Dd]esktop.ini
-
-# ------------------------------------------------------------
-# Testing and Coverage
-# ------------------------------------------------------------
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
-.coverage
-.coverage.*
-htmlcov/
-.tox/
-.nox/
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-
-# ------------------------------------------------------------
-# Jupyter Notebooks
-# ------------------------------------------------------------
-.ipynb_checkpoints/
-*.ipynb_checkpoints
-
-# ------------------------------------------------------------
-# Environment Variables - SECURITY CRITICAL
-# ------------------------------------------------------------
-.env
-.env.local
-.env.*.local
-*.env
-
-# ------------------------------------------------------------
-# LLM-BUBBLE Specific - Generated Data & Artifacts
-# ------------------------------------------------------------
-
-# Generated embeddings (large binary files)
+# Data / Results
+results_real/
+results_output.json
+results_stderr.txt
+full_output.txt
 *.npy
-*.npz
-embeddings/
-embeddings_all_28/
-embeddings_real/
-!embeddings/.gitkeep
 
-# Generated plots and visualizations
-plots/
-!plots/.gitkeep
-
-# Experiment results (JSON, logs)
-results/
-!results/.gitkeep
-# But keep FINAL/PERPLEXITY reports as documentation
-!results_real/**/*.md
-!results_real/**/*.json
-!results_real/**/*.png
-
-# Log files from experiments
-*.log
-real_experiment*.log
-tension_experiment.log
-tension_real_run.log
-
-# Internal planning and working directories
-.sisyphus/
-
-# Model checkpoints and fine-tuned weights (LARGE FILES)
-# These should be stored in Git LFS or external storage
-bubble_finetuned_test/
-models/checkpoint-*/
-*.safetensors
-*.bin
+# Model checkpoints
 *.pt
 *.pth
-*.ckpt
-*.h5
-*.pkl
-*.pickle
+*.bin
+*.safetensors
 
-# ------------------------------------------------------------
-# Data Directories - User-specific or generated
-# ------------------------------------------------------------
-data/
-!data/.gitkeep
-!data/test_corpus.jsonl  # Keep sample corpus for testing
+# Logs
+*.log
+wandb/
+tensorboard/
 
-# Calibration experiments
-calibración/
+# OS
+.DS_Store
+Thumbs.db
 
-# ------------------------------------------------------------
-# Documentation - Generated or internal docs
-# ------------------------------------------------------------
+# Environment
+.env
+.env.local
 
-# Keep arXiv paper PDF as it's the main publication
-!docs/Bubble_Transformer_V3_arXiv.pdf
-!docs/Bubble_Transformer_V3_arXiv.md
-!docs/tsm_arxiv_landscape.svg
+# Build
+dist/
+build/
+*.egg-info
 
-# Ignore internal/planning documentation
-docs/ABRIL/
-docs/legacy/
-docs/IMPL-MEJORAS.md
-docs/MEJORAS.md
-docs/fix_*.py
-docs/generate_arxiv_pdf.py
-docs/superpowers/
+# Jupyter
+.ipynb_checkpoints/
 
-# ------------------------------------------------------------
-# Package Managers
-# ------------------------------------------------------------
-
-# npm/yarn
-node_modules/
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
-# pip
-pip-log.txt
-pip-delete-this-directory.txt
-
-# ------------------------------------------------------------
-# Temporary & Cache Files
-# ------------------------------------------------------------
+# Temporary
+tmp/
+temp/
 *.tmp
-*.temp
-*.bak
-*.backup
-*.swp
-*~
-*.SKIP
-.cache/
-.temp/
-.tmp/
-
-# ------------------------------------------------------------
-# Security - Never commit secrets
-# ------------------------------------------------------------
-secrets/
-.secrets/
-*_secret*
-*_private*
-*_key.pem
-*_crt.pem
-credentials.json
-service-account.json
-
-# ------------------------------------------------------------
-# Large Media Files (use Git LFS if needed)
-# ------------------------------------------------------------
-*.mp4
-*.avi
-*.mov
-*.mkv
-*.mp3
-*.wav
-*.flac
-*.zip
-*.tar.gz
-*.rar
-*.7z
-
-# ------------------------------------------------------------
-# Project-specific internal notes
-# ------------------------------------------------------------
-REALITY.txt
-feedback-sprint2.md
-verify_sprint2.py
