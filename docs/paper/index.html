@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bubble Transformer V5: Focus-Inspired Sinkhorn Token Grouping</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 40px 0; border-bottom: 2px solid #eee; }
+        h1 { font-size: 2.2em; margin-bottom: 10px; color: #1a1a2e; }
+        .subtitle { font-size: 1.1em; color: #666; margin-bottom: 20px; }
+        .authors { font-size: 1em; color: #444; }
+        .badge { display: inline-block; padding: 5px 15px; margin: 5px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
+        .badge-pass { background: #d4edda; color: #155724; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .badge-warn { background: #fff3cd; color: #856404; }
+        section { margin: 30px 0; }
+        h2 { font-size: 1.5em; margin-bottom: 15px; color: #1a1a2e; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        h3 { font-size: 1.2em; margin: 20px 0 10px; color: #333; }
+        p { margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; font-weight: 600; }
+        tr:hover { background: #f5f5f5; }
+        .highlight { background: #fff3cd; font-weight: bold; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: 'Consolas', monospace; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; margin: 15px 0; }
+        .result-box { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; padding: 20px; margin: 20px 0; }
+        .result-box h3 { color: #155724; margin-top: 0; }
+        .cta { text-align: center; margin: 40px 0; }
+        .cta a { display: inline-block; padding: 12px 30px; margin: 5px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .cta a:hover { background: #0056b3; }
+        .cta a.secondary { background: #6c757d; }
+        .cta a.secondary:hover { background: #545b62; }
+        footer { text-align: center; padding: 30px 0; margin-top: 40px; border-top: 1px solid #eee; color: #666; }
+        @media (max-width: 600px) { h1 { font-size: 1.5em; } .badge { font-size: 0.75em; } }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Bubble Transformer V5</h1>
+        <div class="subtitle">Focus-Inspired Sinkhorn Token Grouping for Causal Language Model Attention</div>
+        <div class="authors">Marcus | July 2026</div>
+        <div style="margin-top: 20px;">
+            <span class="badge badge-pass">GATE PASSED (+0.16% PPL)</span>
+            <span class="badge badge-info">501 Tests Passing</span>
+            <span class="badge badge-info">Open Source</span>
+        </div>
+    </header>
+
+    <section>
+        <h2>Abstract</h2>
+        <p>We present Bubble Transformer V5 (BT V5), a hybrid attention mechanism that uses Sinkhorn normalization for token grouping while preserving standard softmax within groups. Through single-layer frozen swap experiments on Qwen3-0.6B with WikiText-2, we find that <strong>FocusDeltaNet achieves PPL=22.550 (+0.16%)</strong> at Layer 7 with λ=0.3, passing the ≤2% PPL gate. Multi-layer experiments show FocusDeltaNet scales to 3 layers at +1.38% PPL. Needle-in-a-Haystack evaluation at 2K tokens shows 100% retrieval accuracy.</p>
+    </section>
+
+    <section>
+        <h2>The Problem</h2>
+        <p>Previous BT V5 variants tried replacing softmax with doubly-stochastic attention (SIRI). All failed the ≤2% PPL gate:</p>
+        <table>
+            <tr><th>Variant</th><th>PPL Drift</th><th>Gate</th></tr>
+            <tr><td>Pure SIRI</td><td>+211%</td><td>FAIL</td></tr>
+            <tr><td>Row-stochastic</td><td>+30%</td><td>FAIL</td></tr>
+            <tr><td>Hybrid approaches</td><td>+2.39% to +2.85%</td><td>FAIL</td></tr>
+        </table>
+        <p>The core issue: <strong>doubly-stochastic normalization destroys the sharp attention distributions language models need.</strong></p>
+    </section>
+
+    <section>
+        <h2>The Insight</h2>
+        <p>The <a href="https://arxiv.org/abs/2604.03260">Focus paper</a> showed that Sinkhorn can <em>improve</em> PPL when used for <strong>token grouping</strong> rather than attention normalization.</p>
+        <pre>S = Q @ K^T / sqrt(d)           # dot-product scores
+S = S + psi                      # Power Diagram bias
+groups = Sinkhorn(S, tau=1)      # soft grouping (doubly-stochastic)
+attn = softmax(S + log(groups))  # softmax within groups (preserved peakedness)
+output = attn @ V</pre>
+    </section>
+
+    <div class="result-box">
+        <h3>Best Result: FocusDeltaNet L7 (λ=0.3)</h3>
+        <p><strong>PPL = 22.550 (+0.16%)</strong> — 12.5x better than the 2% gate threshold</p>
+        <p>Optimal configuration: ε=0.001, τ=1, λ=0.3 (30% DeltaNet, 70% Focus)</p>
+    </div>
+
+    <section>
+        <h2>Multi-Layer Scaling</h2>
+        <table>
+            <tr><th>Configuration</th><th>PPL</th><th>Δ%</th><th>Gate</th></tr>
+            <tr class="highlight"><td>FocusDeltaNet L7</td><td>22.550</td><td>+0.16%</td><td>PASS</td></tr>
+            <tr><td>FocusDeltaNet L7+L10</td><td>22.648</td><td>+0.60%</td><td>PASS</td></tr>
+            <tr><td>FocusDeltaNet L7+L10+L12</td><td>22.825</td><td>+1.38%</td><td>PASS</td></tr>
+            <tr><td>Focus L7+L12</td><td>22.883</td><td>+1.64%</td><td>PASS</td></tr>
+            <tr><td>Focus L7+L10</td><td>23.100</td><td>+2.61%</td><td>FAIL</td></tr>
+        </table>
+        <p><strong>Key finding:</strong> FocusDeltaNet scales to 3 layers while pure Focus degrades.</p>
+    </section>
+
+    <section>
+        <h2>Long-Context Retrieval (NIAH)</h2>
+        <table>
+            <tr><th>Configuration</th><th>Retrieval Accuracy</th></tr>
+            <tr><td>Softmax Baseline</td><td>100%</td></tr>
+            <tr><td>Focus Bubble L7</td><td>100%</td></tr>
+            <tr><td>FocusDeltaNet L7</td><td>100%</td></tr>
+        </table>
+        <p>All configurations achieve perfect retrieval at 2K tokens.</p>
+    </section>
+
+    <section>
+        <h2>Honest Caveats</h2>
+        <ul>
+            <li>Single-layer swap only (not validated with pretrain from scratch)</li>
+            <li>Limited long-context (NIAH at 2K tokens, GTX 1650 VRAM limit)</li>
+            <li>No downstream evaluation (MMLU, HumanEval, GSM8K)</li>
+            <li>Power Diagram ψ absorbed by Sinkhorn column normalization</li>
+            <li>L9 anomaly unexplained (+2.28% PPL while neighbors pass)</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Reproducibility</h2>
+        <table>
+            <tr><th>Item</th><th>Value</th></tr>
+            <tr><td>Code</td><td><a href="https://github.com/Markush418/LLM-BUBBLE-TRANSFORMER">GitHub Repository</a></td></tr>
+            <tr><td>Tests</td><td>501 passing, 0 failed</td></tr>
+            <tr><td>Hardware</td><td>GTX 1650 (4.3GB VRAM)</td></tr>
+            <tr><td>Time</td><td>~30 minutes for full benchmark</td></tr>
+        </table>
+        <pre># Run the benchmarks
+py experiments/benchmark_focus_fine_sweep.py
+py experiments/benchmark_focus_layer_sweep_optimal.py
+py experiments/benchmark_focus_deltanet_sweep.py
+py experiments/benchmark_focus_multilayer.py</pre>
+    </section>
+
+    <div class="cta">
+        <a href="https://github.com/Markush418/LLM-BUBBLE-TRANSFORMER">View on GitHub</a>
+        <a href="https://github.com/Markush418/LLM-BUBBLE-TRANSFORMER/blob/main/paper/main.pdf" class="secondary">Download PDF</a>
+    </div>
+
+    <footer>
+        <p>Bubble Transformer V5 | July 2026</p>
+        <p>Status: Research artifact, not production system</p>
+        <p>Contact: marcus@automate.dev</p>
+    </footer>
+</body>
+</html>
