@@ -1,0 +1,166 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\title{Supplementary Material: Bubble Transformer V5}
+
+\author{Marcus\\ \texttt{marcus@automate.dev}}
+
+\date{July 2026}
+
+\begin{document}
+\maketitle
+
+\section{Complete Parameter Sweep Results}
+
+\subsection{Fine Epsilon Sweep (L7, tau=5)}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ccccc}
+\toprule
+Epsilon & Tau & PPL & $\Delta\%$ & Gate \\
+\midrule
+0.001 & 5 & 23.034 & $+2.31\%$ & FAIL \\
+0.005 & 5 & 23.034 & $+2.31\%$ & FAIL \\
+0.010 & 5 & 23.039 & $+2.33\%$ & FAIL \\
+0.020 & 5 & 23.047 & $+2.37\%$ & FAIL \\
+0.050 & 5 & 23.064 & $+2.45\%$ & FAIL \\
+0.100 & 5 & 23.082 & $+2.53\%$ & FAIL \\
+0.200 & 5 & 23.130 & $+2.74\%$ & FAIL \\
+0.500 & 5 & 23.370 & $+3.81\%$ & FAIL \\
+1.000 & 5 & 23.606 & $+4.85\%$ & FAIL \\
+\bottomrule
+\end{tabular}
+\caption{Epsilon sweep at tau=5 (all fail).}
+\end{table}
+
+\subsection{Tau Sweep (L7, eps=0.001)}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ccccc}
+\toprule
+Epsilon & Tau & PPL & $\Delta\%$ & Gate \\
+\midrule
+0.001 & 1 & \textbf{22.706} & \textbf{+0.86\%} & \textbf{PASS} \\
+0.001 & 2 & 22.843 & $+1.47\%$ & PASS \\
+0.001 & 3 & 22.930 & $+1.85\%$ & PASS \\
+0.001 & 5 & 23.034 & $+2.31\%$ & FAIL \\
+\bottomrule
+\end{tabular}
+\caption{Tau sweep at epsilon=0.001.}
+\end{table}
+
+\section{FocusDeltaNet Lambda Sweep}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ccccc}
+\toprule
+Lambda & PPL & $\Delta\%$ & Gate & Time (s) \\
+\midrule
+0.0 & 22.681 & $+0.74\%$ & PASS & 79.8 \\
+0.1 & 22.603 & $+0.40\%$ & PASS & 78.2 \\
+0.2 & 22.554 & $+0.18\%$ & PASS & 79.1 \\
+\textbf{0.3} & \textbf{22.550} & \textbf{+0.16\%} & \textbf{PASS} & 79.8 \\
+0.4 & 22.580 & $+0.30\%$ & PASS & 78.5 \\
+0.5 & 22.651 & $+0.61\%$ & PASS & 79.3 \\
+0.6 & 22.780 & $+1.18\%$ & PASS & 78.9 \\
+0.7 & 22.900 & $+1.72\%$ & PASS & 79.0 \\
+0.8 & 23.079 & $+2.51\%$ & FAIL & 78.7 \\
+0.9 & 23.297 & $+3.48\%$ & FAIL & 79.2 \\
+1.0 & 23.558 & $+4.64\%$ & FAIL & 78.4 \\
+\bottomrule
+\end{tabular}
+\caption{Complete lambda sweep at L7, eps=0.001, tau=1.}
+\end{table}
+
+\section{Non-Triviality Verification}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Metric & Softmax & Focus \\
+\midrule
+L2\_diff (avg) & --- & 1.832293 \\
+L2\_baseline (avg) & 8.095327 & --- \\
+\textbf{L2\_ratio} & --- & \textbf{22.63\%} \\
+CR (concentration) & 0.257080 & 0.212097 \\
+\bottomrule
+\end{tabular}
+\caption{Non-triviality: L2\_ratio $> 5\%$ threshold.}
+\end{table}
+
+\section{Per-Head Analysis (L9 vs L10)}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Head & L9 L2\_ratio & L10 L2\_ratio \\
+\midrule
+H0 & 24.00\% & 32.22\% \\
+H1 & 20.15\% & 18.73\% \\
+H2 & \textbf{131.81\%} & 25.44\% \\
+H3 & 22.33\% & 28.91\% \\
+H4 & 19.87\% & 24.56\% \\
+H5 & 21.44\% & 22.18\% \\
+H6 & \textbf{153.63\%} & \textbf{89.21\%} \\
+H7 & 25.67\% & 31.44\% \\
+H8 & 23.12\% & 27.33\% \\
+H9 & 20.88\% & \textbf{67.55\%} \\
+H10 & 22.45\% & 25.12\% \\
+H11 & 19.33\% & 23.87\% \\
+H12 & 21.78\% & 26.44\% \\
+H13 & 24.22\% & 29.11\% \\
+H14 & 22.56\% & 24.78\% \\
+H15 & 20.11\% & 22.33\% \\
+\bottomrule
+\end{tabular}
+\caption{Per-head L2\_ratio (Focus vs Softmax) at L9 and L10.}
+\end{table}
+
+\section{Multi-Layer Results}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcccc}
+\toprule
+Configuration & Layers & PPL & $\Delta\%$ & Gate \\
+\midrule
+Focus L7 & [7] & 22.681 & $+0.74\%$ & PASS \\
+Focus L10 & [10] & 22.757 & $+1.08\%$ & PASS \\
+Focus L12 & [12] & 22.706 & $+0.86\%$ & PASS \\
+Focus L7+L10 & [7,10] & 23.100 & $+2.61\%$ & FAIL \\
+Focus L7+L12 & [7,12] & 22.883 & $+1.64\%$ & PASS \\
+Focus L10+L12 & [10,12] & 22.986 & $+2.10\%$ & FAIL \\
+Focus L7+L10+L12 & [7,10,12] & 23.339 & $+3.67\%$ & FAIL \\
+\midrule
+FocusDeltaNet L7 & [7] & 22.550 & $+0.16\%$ & PASS \\
+FocusDeltaNet L7+L10 & [7,10] & 22.648 & $+0.60\%$ & PASS \\
+FocusDeltaNet L7+L10+L12 & [7,10,12] & 22.825 & $+1.38\%$ & PASS \\
+\bottomrule
+\end{tabular}
+\caption{Multi-layer swap results.}
+\end{table}
+
+\section{Test Suite}
+
+Total tests: 501 (500 pass, 1 skip, 0 fail)
+
+\begin{itemize}
+  \item \texttt{tests/test\_focus\_bubble\_attention.py}: 17 unit tests
+  \item \texttt{tests/test\_focus\_bubble\_wrapper.py}: 9 integration tests (GPU)
+  \item \texttt{tests/test\_attention\_variants.py}: 11 tests (Gumbel-Sinkhorn, Sparse-Sinkhorn)
+  \item All existing BT V5 tests: 464 tests
+\end{itemize}
+
+\end{document}

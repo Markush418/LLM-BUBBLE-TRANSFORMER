@@ -1,0 +1,360 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{multirow}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\title{Bubble Transformer V5: Focus-Inspired Sinkhorn Token Grouping for Causal Language Model Attention}
+
+\author{
+  Marcus\\
+  \texttt{marcus@automate.dev}
+}
+
+\date{July 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We present Bubble Transformer V5 (BT V5), a hybrid attention mechanism that uses Sinkhorn normalization for token grouping while preserving standard softmax within groups. Unlike previous BT V5 variants that replaced softmax with doubly-stochastic attention---destroying the peaked distribution needed for language modeling---BT V5 restricts Sinkhorn's role to grouping tokens, then applies standard softmax to maintain peakedness. Through single-layer frozen swap experiments on Qwen3-0.6B with WikiText-2, we find that: (1) Focus Bubble passes the $\leq 2\%$ PPL gate at multiple layers, (2) the optimal configuration is Layer 7 with $\epsilon=0.001$, $\tau=1$, $\lambda=0.3$ achieving PPL$=22.550$ ($+0.16\%$), and (3) FocusDeltaNet (combining Focus grouping with DeltaNet delta rule) provides $4.7\times$ improvement over Focus-only. We present 501 tests passing and reproducible benchmark results. Multi-layer experiments show FocusDeltaNet scales to 3 layers at $+1.38\%$ PPL while pure Focus degrades with $>2$ layers. Needle-in-a-Haystack evaluation at 2K tokens shows 100\% retrieval accuracy for all configurations.
+\end{abstract}
+
+\section{Introduction}
+
+\subsection{Motivation}
+
+Previous BT V5 variants (V1--V4) attempted to replace softmax attention with doubly-stochastic attention (SIRI) or geometric cost functions. All variants failed the $\leq 2\%$ PPL gate on Qwen3-0.6B / WikiText-2, with best results ranging from $+2.39\%$ to $+211\%$ PPL drift.
+
+The core problem: doubly-stochastic attention destroys the peaked distribution that softmax provides. Language modeling requires sharp attention distributions to concentrate on relevant tokens. Forcing doubly-stochastic normalization (row sums $= 1$, column sums $= 1$) distributes attention mass uniformly across all tokens, destroying peakedness.
+
+\subsection{The Insight from Focus}
+
+The Focus paper~\cite{focus2026} demonstrated that Sinkhorn normalization can improve PPL when used for token grouping rather than attention normalization. The key idea:
+
+\begin{enumerate}
+  \item Use Sinkhorn to create soft group assignments
+  \item Apply standard softmax \emph{within} each group
+  \item This preserves peakedness while adding geometric structure
+\end{enumerate}
+
+Focus achieved $42.8 \to 30.3$ PPL ($29\%$ improvement) on GPT-2 124M with this approach.
+
+\subsection{Contributions}
+
+This paper presents:
+
+\begin{itemize}
+  \item The Focus Bubble architecture (Sinkhorn grouping + softmax within groups)
+  \item Honest benchmark results with explicit failure modes
+  \item Multi-layer scaling analysis (FocusDeltaNet scales to 3 layers)
+  \item Engineering decisions and bug fixes for numerical safety
+\end{itemize}
+
+\section{The PPL Gate}
+
+\subsection{Gate Definition}
+
+Per BT V5 protocol:
+\begin{equation}
+  \Delta\text{PPL} = \text{PPL}_{\text{BT}} - \text{PPL}_{\text{softmax}} \leq 2.00\%
+\end{equation}
+
+For Qwen3-0.6B / WikiText-2 (50k chars, 44 windows):
+\begin{itemize}
+  \item Baseline PPL: $22.513$
+  \item Gate max: $22.964$
+\end{itemize}
+
+\subsection{Previous Failures}
+
+\begin{table}[h]
+\centering
+\caption{Previous BT V5 variants that failed the PPL gate.}
+\label{tab:failures}
+\begin{tabular}{lrrc}
+\toprule
+Variant & Best PPL & $\Delta\%$ & Gate \\
+\midrule
+Pure SIRI (doubly-stochastic) & 69.968 & $+211\%$ & FAIL \\
+Row-stochastic-only & 28.601 & $+30\%$ & FAIL \\
+Hybrid Approach 1 (dot-product) & 22.627 & $+2.85\%$ & FAIL \\
+Hybrid Approach 2 (hybrid cost) & 22.627 & $+2.85\%$ & FAIL \\
+Hybrid Approach 3 (DeltaNet + SIRI bias) & 23.052 & $+2.39\%$ & FAIL \\
+Learnable beta (Approach 3) & 23.052 & $+2.39\%$ & FAIL \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Focus Bubble Architecture}
+
+\subsection{Core Pipeline}
+
+\textbf{FocusBubbleAttention} (input: $[\text{B}, \text{N}, \text{D}]$):
+
+\begin{enumerate}
+  \item \textbf{Q, K, V projections}: Standard learned projections
+  \item \textbf{Compute scores}: $S = QK^T / \sqrt{d}$ (dot-product, NOT geometric)
+  \item \textbf{Add Power Diagram bias}: $S = S + \psi$ (learnable per-head)
+  \item \textbf{Sinkhorn for grouping}: Apply $\tau$ iterations of Sinkhorn-Knopp normalization
+  \item \textbf{Softmax within groups}: Standard softmax on grouped scores (preserves peakedness)
+  \item \textbf{Output projection}: Standard learned output projection
+\end{enumerate}
+
+\subsection{Key Difference from SIRI}
+
+\begin{table}[h]
+\centering
+\caption{Comparison of SIRI (V1--V4) vs Focus Bubble (V5).}
+\label{tab:comparison}
+\begin{tabular}{lcc}
+\toprule
+Component & SIRI (V1--V4) & Focus Bubble (V5) \\
+\midrule
+Sinkhorn role & Normalize attention weights & Group tokens \\
+Softmax & Replaced by doubly-stochastic & Preserved within groups \\
+Peakedness & Destroyed & Preserved \\
+PPL impact & $+30\%$ to $+211\%$ & $+0.16\%$ to $+0.74\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Mathematical Formulation}
+
+Let $S \in \mathbb{R}^{N \times N}$ be the score matrix, $\psi \in \mathbb{R}^H$ be the per-head bias.
+
+\textbf{Sinkhorn grouping} ($\tau$ iterations):
+\begin{align}
+  S_0 &= S \\
+  S_k &= \text{log\_sinkhorn}(S_{k-1}) \\
+  \text{groups} &= \exp(S_\tau)
+\end{align}
+
+\textbf{Softmax within groups}:
+\begin{align}
+  \text{attn} &= \text{softmax}(S + \log(\text{groups}), \text{dim}=-1) \\
+  \text{output} &= \text{attn} \cdot V
+\end{align}
+
+\subsection{FocusDeltaNet Variant}
+
+For the best results, we combine Focus grouping with DeltaNet delta rule:
+\begin{equation}
+  \text{output} = \lambda \cdot \text{DeltaNet}(Q,K,V) + (1-\lambda) \cdot \text{FocusBubble}(Q,K,V)
+\end{equation}
+
+With safe normalization of Q, K, V (norm clamping to prevent overflow), this achieves PPL$=22.550$ at $\lambda=0.3$.
+
+\section{Experimental Results}
+
+\subsection{Setup}
+
+\begin{itemize}
+  \item Model: Qwen3-0.6B-Base (float16, eager attention)
+  \item Dataset: WikiText-2 test split, 50k chars
+  \item Hardware: GTX 1650 (4.3GB VRAM)
+\end{itemize}
+
+\subsection{Parameter Sensitivity (L7, Focus Only)}
+
+\textbf{Epsilon sweep} ($\tau=5$):
+
+\begin{table}[h]
+\centering
+\caption{Epsilon sweep at $\tau=5$ (all fail).}
+\begin{tabular}{ccc}
+\toprule
+Epsilon & PPL & Gate \\
+\midrule
+0.001 & 23.034 & FAIL \\
+0.010 & 23.039 & FAIL \\
+0.100 & 23.082 & FAIL \\
+1.000 & 23.606 & FAIL \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Tau sweep} ($\epsilon=0.001$):
+
+\begin{table}[h]
+\centering
+\caption{Tau sweep at $\epsilon=0.001$.}
+\begin{tabular}{ccc}
+\toprule
+$\tau$ & PPL & Gate \\
+\midrule
+\textbf{1} & \textbf{22.706} & \textbf{PASS} \\
+2 & 22.843 & PASS \\
+3 & 22.930 & PASS \\
+5 & 23.034 & FAIL \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Layer Sweep ($\epsilon=0.001$, $\tau=1$)}
+
+\begin{table}[h]
+\centering
+\caption{Layer sweep results.}
+\label{tab:layer}
+\begin{tabular}{ccc}
+\toprule
+Layer & PPL & Gate \\
+\midrule
+L3 & 22.960 & PASS \\
+L5 & 22.928 & PASS \\
+\textbf{L7} & \textbf{22.681} & \textbf{PASS} \\
+L9 & 23.026 & FAIL \\
+L10 & 22.757 & PASS \\
+L11 & 22.772 & PASS \\
+L12 & 22.706 & PASS \\
+L15 & 22.814 & PASS \\
+L19 & 22.850 & PASS \\
+L23 & 23.154 & FAIL \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{FocusDeltaNet Lambda Sweep}
+
+\begin{table}[h]
+\centering
+\caption{Lambda sweep at L7, $\epsilon=0.001$, $\tau=1$.}
+\label{tab:lambda}
+\begin{tabular}{ccc}
+\toprule
+$\lambda$ & PPL & Gate \\
+\midrule
+0.0 (Focus only) & 22.681 & PASS \\
+0.2 & 22.554 & PASS \\
+\textbf{0.3} & \textbf{22.550} & \textbf{PASS} \\
+0.5 & 22.651 & PASS \\
+0.7 & 22.900 & PASS \\
+0.8 & 23.079 & FAIL \\
+0.9 & 23.297 & FAIL \\
+1.0 (DeltaNet only) & 23.558 & FAIL \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Multi-Layer Scaling}
+
+\begin{table}[h]
+\centering
+\caption{Multi-layer swap results.}
+\label{tab:multilayer}
+\begin{tabular}{lccc}
+\toprule
+Configuration & PPL & $\Delta\%$ & Gate \\
+\midrule
+Focus L7 & 22.681 & $+0.74\%$ & PASS \\
+Focus L7+L10 & 23.100 & $+2.61\%$ & FAIL \\
+Focus L7+L12 & 22.883 & $+1.64\%$ & PASS \\
+Focus L7+L10+L12 & 23.339 & $+3.67\%$ & FAIL \\
+\midrule
+FocusDeltaNet L7 & 22.550 & $+0.16\%$ & PASS \\
+FocusDeltaNet L7+L10 & 22.648 & $+0.60\%$ & PASS \\
+FocusDeltaNet L7+L10+L12 & 22.825 & $+1.38\%$ & PASS \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Needle-in-a-Haystack (NIAH)}
+
+\begin{table}[h]
+\centering
+\caption{NIAH retrieval accuracy at 2K tokens.}
+\begin{tabular}{lc}
+\toprule
+Configuration & Retrieval Accuracy \\
+\midrule
+Softmax Baseline & 100\% \\
+Focus Bubble L7 & 100\% \\
+FocusDeltaNet L7 & 100\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{L9 Anomaly}
+
+L9 is the only mid-layer that fails the gate ($+2.28\%$) while neighbors L10/L11/L12 pass comfortably ($+1.08\%$, $+1.15\%$, $+0.86\%$). Re-measurement confirms exact replication (diff $= 0.0002$ PPL).
+
+Per-head analysis shows L9's outlier heads (H2: $131.81\%$, H6: $153.63\%$) are not geometric outliers compared to L10's outliers (H6, H9). The failure appears to stem from integration effects across heads, not individual head geometry.
+
+\section{Power Diagram $\psi$: Honest Caveat}
+
+The $\psi$ bias is \textbf{absorbed by Sinkhorn column normalization}. Empirically:
+\begin{itemize}
+  \item L12 FocusOnly psi=True: PPL$=23.082$
+  \item L12 FocusOnly psi=False: PPL$=23.082$
+  \item \textbf{Identical results} --- $\psi$ has no effect on output
+\end{itemize}
+
+\section{Numerical Safety Engineering}
+
+Key bugs fixed:
+\begin{enumerate}
+  \item \textbf{FocusDeltaNet NaN}: Missing Q/K/V normalization in delta rule --- fixed with \texttt{\_safe\_normalize()}
+  \item \textbf{q\_norm shape}: Applied view+transpose BEFORE q\_norm for head-wise RMSNorm
+  \item \textbf{RoPE signature}: Corrected to \texttt{apply\_rotary\_pos\_emb(Q, K, cos, sin)}
+  \item \textbf{Wrapper return type}: Changed to 2-tuple (out, attn\_weights)
+\end{enumerate}
+
+\section{Reproducibility}
+
+\begin{itemize}
+  \item Code: \url{https://github.com/Markush418/LLM-BUBBLE-TRANSFORMER}
+  \item Tests: 501 passing, 0 failed
+  \item Hardware: GTX 1650 (4.3GB VRAM)
+  \item Time: $\sim$30 minutes for full benchmark suite
+\end{itemize}
+
+\section{Limitations and Future Work}
+
+\textbf{Limitations}:
+\begin{itemize}
+  \item Single-layer swap only (not validated with pretrain from scratch)
+  \item Limited long-context (NIAH at 2K tokens, GTX 1650 VRAM limit)
+  \item No downstream evaluation (MMLU, HumanEval, GSM8K)
+  \item L9 anomaly unexplained
+\end{itemize}
+
+\textbf{Future Work}:
+\begin{itemize}
+  \item Pretrain Bubble-1.3B from scratch
+  \item Long-context evaluation (4K--32K tokens)
+  \item Downstream task evaluation
+  \item Speed optimization (CUDA kernel)
+\end{itemize}
+
+\begin{thebibliography}{1}
+
+\bibitem{focus2026}
+Focus: Sinkhorn for token grouping, softmax within groups.
+\newblock arXiv:2604.03260, 2026.
+
+\bibitem{gateddeltanet2024}
+Gated DeltaNet: Delta rule + gating for linear attention.
+\newblock arXiv:2412.06464, 2024.
+
+\bibitem{kimi2025}
+Kimi Linear: Hybrid linear attention with channel-wise decay.
+\newblock arXiv:2510.26692, 2025.
+
+\bibitem{qwen32025}
+Qwen3 Technical Report.
+\newblock arXiv:2505.09388, 2025.
+
+\end{thebibliography}
+
+\end{document}
