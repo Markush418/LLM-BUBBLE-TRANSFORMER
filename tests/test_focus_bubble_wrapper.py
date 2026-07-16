@@ -5,14 +5,18 @@ import os
 import unittest
 import torch
 
-# Skip GPU tests if no CUDA
-SKIP_CUDA = not torch.cuda.is_available()
+# Skip tests unless CUDA + opt-in flag (Qwen3-0.6B download is ~600MB, and
+# transformers' threaded model loading can crash the Python 3.14 process
+# mid-download, cascading into unrelated test failures — hence opt-in).
+SKIP_QWEN3 = not (
+    torch.cuda.is_available() and os.environ.get("RUN_QWEN3_TESTS") == "1"
+)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "experiments"))
 from qwen3_focus_bubble_wrapper import Qwen3FocusBubbleWrapper
 
 
-@unittest.skipIf(SKIP_CUDA, "CUDA not available")
+@unittest.skipIf(SKIP_QWEN3, "Requires CUDA + RUN_QWEN3_TESTS=1 (opt-in)")
 class TestQwen3FocusBubbleWrapper(unittest.TestCase):
     """Integration tests for Qwen3FocusBubbleWrapper with real Qwen3 model."""
 
@@ -201,7 +205,7 @@ class TestQwen3FocusBubbleWrapper(unittest.TestCase):
         self.tearDown()
 
 
-@unittest.skipIf(SKIP_CUDA, "CUDA not available")
+@unittest.skipIf(SKIP_QWEN3, "Requires CUDA + RUN_QWEN3_TESTS=1 (opt-in)")
 class TestQwen3FocusBubbleWrapperDeltaNet(unittest.TestCase):
     """Integration tests for FocusDeltaNet variant."""
 

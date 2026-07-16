@@ -27,7 +27,7 @@
 \maketitle
 
 \begin{abstract}
-We present Bubble Transformer V5 (BT V5), a hybrid attention mechanism that uses Sinkhorn normalization for token grouping while preserving standard softmax within groups. Unlike previous BT V5 variants that replaced softmax with doubly-stochastic attention---destroying the peaked distribution needed for language modeling---BT V5 restricts Sinkhorn's role to grouping tokens, then applies standard softmax to maintain peakedness. Through single-layer frozen swap experiments on Qwen3-0.6B with WikiText-2, we find that: (1) Focus Bubble passes the $\leq 2\%$ PPL gate at multiple layers, (2) the optimal configuration is Layer 7 with $\epsilon=0.001$, $\tau=1$, $\lambda=0.3$ achieving PPL$=22.550$ ($+0.16\%$), and (3) FocusDeltaNet (combining Focus grouping with DeltaNet delta rule) provides $4.7\times$ improvement over Focus-only. We present 501 tests passing and reproducible benchmark results. Multi-layer experiments show FocusDeltaNet scales to 3 layers at $+1.38\%$ PPL while pure Focus degrades with $>2$ layers. Needle-in-a-Haystack evaluation at 2K tokens shows 100\% retrieval accuracy for all configurations.
+We present Bubble Transformer V5 (BT V5), a hybrid attention mechanism that uses Sinkhorn normalization for token grouping while preserving standard softmax within groups. Unlike previous BT V5 variants that replaced softmax with doubly-stochastic attention---destroying the peaked distribution needed for language modeling---BT V5 restricts Sinkhorn's role to grouping tokens, then applies standard softmax to maintain peakedness. Through single-layer frozen swap experiments on Qwen3-0.6B with WikiText-2, we find that: (1) Focus Bubble passes the $\leq 2\%$ PPL gate at multiple layers, (2) the optimal configuration is Layer 7 with $\epsilon=0.001$, $\tau=1$, $\lambda=0.3$ achieving PPL$=22.550$ ($+0.16\%$), and (3) FocusDeltaNet (combining Focus grouping with DeltaNet delta rule) provides $4.7\times$ improvement over Focus-only. We present a 490-test suite (489 passing, 1 skipped on the reference GPU box; 475 passing with 15 opt-in wrapper tests skipped on a bare CI env) and reproducible benchmark results. Multi-layer experiments show FocusDeltaNet scales to 3 layers at $+1.38\%$ PPL while pure Focus degrades with $>2$ layers. Needle-in-a-Haystack evaluation at 2K tokens shows 100\% retrieval accuracy for all configurations.
 \end{abstract}
 
 \section{Introduction}
@@ -314,7 +314,7 @@ Key bugs fixed:
 
 \begin{itemize}
   \item Code: \url{https://github.com/Markush418/LLM-BUBBLE-TRANSFORMER}
-  \item Tests: 501 passing, 0 failed
+  \item Tests: 490 collected. Bare env (no GPU / no Qwen3 cache): 475 passing, 15 opt-in skipped, 0 failed. Dev box (GPU + \texttt{RUN\_QWEN3\_TESTS=1}): 489 passing, 1 skipped, 0 failed.
   \item Hardware: GTX 1650 (4.3GB VRAM)
   \item Time: $\sim$30 minutes for full benchmark suite
 \end{itemize}

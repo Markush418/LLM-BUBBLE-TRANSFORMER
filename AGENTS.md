@@ -23,7 +23,8 @@ python experiments/run_experiment.py --mode mock
 python experiments/run_experiment.py --mode real
 
 # Tests
-python -m pytest tests/ -v                                   # 490 collected; 468 pass in a bare env, ~489 on the dev box (14 wrapper errors + 1 CUDA test need cached Qwen3 + GPU)
+python -m pytest tests/ -v                                   # 475 pass, 15 opt-in skipped, 0 failed (bare env)
+RUN_QWEN3_TESTS=1 python -m pytest tests/ -v                 # 489 pass, 1 skipped, 0 failed (GPU box + cached Qwen3)
 python -m pytest tests/test_focus_bubble_attention.py -v     # V5 core
 python -m pytest tests/test_hybrid_attention.py -v           # V4 hybrid (kept)
 
@@ -91,7 +92,7 @@ out = lam * out_delta + (1 - lam) * out_focus_bubble
   - `metrics.py`, `spectral_metrics.py`, `epsilon_sweep.py` — diagnostics (NumPy)
   - `config.py` — `get_config()`; never hardcode
 - **`models/`** — PyTorch wrappers.
-- **`tests/`** — 30 test files, 490 tests collected. Bare-env baseline: 468 passing / 1 skipped / 7 failed (6 NumPy 2.4 numerical + 1 CUDA-absent) / 14 errored (missing Qwen3 cache). On the dev box with GPU + cached Qwen3: 14 wrapper errors and 1 CUDA test flip to pass.
+- **`tests/`** — 28 test files, 490 tests collected. Bare-env baseline: **475 passing, 15 skipped, 0 failed** (opt-in Qwen3 wrapper tests skip cleanly). Dev box with GPU + `RUN_QWEN3_TESTS=1`: **489 passing, 1 skipped, 0 failed**.
 - **`paper/main.tex`** — arXiv preprint (V5 Focus Bubble).
 - **`docs/blog_post.md`** — public writeup of the gate-passing result.
 - **`IMPORTANTE/BT-V5_*.md`** — 7 formal papers (0=bases, I=arch, II=SIRI, III=diff/routing, IV=complexity, V=protocol, VI=focus). These are the source of truth for anything design-level.
@@ -177,7 +178,7 @@ Preserve these across any architectural change. If you need to break one, docume
 - **July 2026** — **Focus Bubble V5** introduced. First configuration to pass the gate: FocusDeltaNet L7 λ=0.3 at +0.16% PPL.
 - **July 2026** — arXiv paper drafted (`paper/main.tex`), blog post published (`docs/blog_post.md`), GitHub Pages live with PDF.
 
-Test count trajectory: 564 (pre-SDOT-removal) → 393 (post-cleanup) → 462 (post-SIRI-Soft) → **490 (current, post-Focus-Bubble)**. Note: earlier docs (blog post, arXiv paper draft) cite "501 passing" — that was on the dev box with GPU + cached Qwen3 and pre-NumPy-2.4. The bare-env, reproducible count is 468/490.
+Test count trajectory: 564 (pre-SDOT-removal) → 393 (post-cleanup) → 462 (post-SIRI-Soft) → **490 collected (current, post-Focus-Bubble)**. Real pass counts: 475/490 on bare env, 489/490 on GPU box. Earlier docs cited "501" — that number came from a pre-NumPy-2.4 run and did not survive audit; superseded across README, AGENTS.md, paper/main.tex, paper/supplementary.tex, and docs/blog_post.md.
 
 Full migration rationale: [`docs/decisions/2026-06-27-sota-replacement-siri-preserved.md`](docs/decisions/2026-06-27-sota-replacement-siri-preserved.md).
 

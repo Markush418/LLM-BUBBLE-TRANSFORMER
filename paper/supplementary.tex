@@ -154,13 +154,15 @@ FocusDeltaNet L7+L10+L12 & [7,10,12] & 22.825 & $+1.38\%$ & PASS \\
 
 \section{Test Suite}
 
-Total tests: 501 (500 pass, 1 skip, 0 fail)
+Total tests: 490 collected across 28 files. Reference GPU box (\texttt{RUN\_QWEN3\_TESTS=1}): 489 pass, 1 skip, 0 fail. Bare CI env (no GPU / no Qwen3 cache): 475 pass, 15 skip (opt-in Qwen3 wrapper tests), 0 fail.
+
+Highlights of the V5 additions:
 
 \begin{itemize}
-  \item \texttt{tests/test\_focus\_bubble\_attention.py}: 17 unit tests
-  \item \texttt{tests/test\_focus\_bubble\_wrapper.py}: 9 integration tests (GPU)
-  \item \texttt{tests/test\_attention\_variants.py}: 11 tests (Gumbel-Sinkhorn, Sparse-Sinkhorn)
-  \item All existing BT V5 tests: 464 tests
+  \item \texttt{tests/test\_focus\_bubble\_attention.py}: 17 unit tests for \texttt{FocusBubbleAttention} and \texttt{FocusBubbleDeltaNet}
+  \item \texttt{tests/test\_focus\_bubble\_wrapper.py}: 9 integration tests on real Qwen3 (GPU + opt-in)
+  \item \texttt{tests/test\_qwen3\_hybrid\_wrapper.py}: 5 integration tests on real Qwen3 (GPU + opt-in)
+  \item Retained BT V5 core tests (attention, metrics, spectral, cost, sweeps, etc.): 459 tests
 \end{itemize}
 
 \end{document}

@@ -124,7 +124,7 @@ L9 fails the gate (+2.28%) while neighbors L10/L11/L12 pass (+1.08%, +1.15%, +0.
 ## Reproducibility
 
 - **Code**: https://github.com/Markush418/LLM-BUBBLE-TRANSFORMER
-- **Tests**: 501 passing, 0 failed
+- **Tests**: 490 collected. 489 passing, 1 skipped, 0 failed on the reference GPU box with `RUN_QWEN3_TESTS=1`. 475 passing, 15 opt-in Qwen3-download tests skipped, 0 failed on a bare CI env.
 - **Hardware**: GTX 1650 (4.3GB VRAM)
 - **Time**: ~30 minutes for full benchmark suite
 

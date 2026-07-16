@@ -19,8 +19,10 @@ except ImportError:
 
 
 @unittest.skipUnless(
-    HAS_TRANSFORMERS and torch.cuda.is_available(),
-    "Requires transformers + CUDA",
+    HAS_TRANSFORMERS
+    and torch.cuda.is_available()
+    and os.environ.get("RUN_QWEN3_TESTS") == "1",
+    "Requires transformers + CUDA + RUN_QWEN3_TESTS=1 (opt-in: downloads Qwen3-0.6B)",
 )
 class TestQwen3RealModel(unittest.TestCase):
     """Tests with the real Qwen3-0.6B model."""
