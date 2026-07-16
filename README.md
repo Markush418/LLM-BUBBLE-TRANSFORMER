@@ -8,6 +8,8 @@
 ![Tests](https://img.shields.io/badge/tests-475%2F490_passing-brightgreen.svg)
 <!-- TODO: Zenodo DOI badge -->
 
+*Leyendo en otro idioma? [Versión en español](README-es.md).*
+
 ---
 
 ## TL;DR
